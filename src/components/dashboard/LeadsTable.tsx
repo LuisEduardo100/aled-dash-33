@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CRMLead, getLeadStatusInfo, getDetailedSource } from '@/types/crm';
+import { CRMLead, getLeadStatusInfo, getSourceAttribution } from '@/types/crm';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -58,7 +58,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
           comparison = a.status_id.localeCompare(b.status_id);
           break;
         case 'source_id':
-          comparison = getDetailedSource(a.source_id).localeCompare(getDetailedSource(b.source_id));
+          comparison = getSourceAttribution(a.source_id).localeCompare(getSourceAttribution(b.source_id));
           break;
       }
       return sortDirection === 'asc' ? comparison : -comparison;
@@ -202,7 +202,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
                   <TableCell>{getStatusBadge(lead.status_id)}</TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
-                      {getDetailedSource(lead.source_id)}
+                      {getSourceAttribution(lead.source_id)}
                     </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">

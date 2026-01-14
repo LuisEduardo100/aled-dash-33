@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { CRMLead, CRMDeal, getDetailedSource, getDealCategory, isGoogleAds, isMetaAds, isIndicacao, getSourceAttribution } from '@/types/crm';
+import { CRMLead, CRMDeal, getSourceAttribution, getDealCategory, getDetailedSource, isGoogleAds } from '@/types/crm';
 import { mockLeads, mockDeals } from '@/data/mockData';
 import { API_CONFIG } from '@/config/api';
 
@@ -135,13 +135,11 @@ export const useMetrics = (leads: CRMLead[], deals: CRMDeal[]) => {
     const totalLeads = leads.length;
     const inProgress = leads.filter(l => l.status_id === 'IN_PROCESS').length;
     const discarded = leads.filter(l => l.status_id === 'JUNK' || l.discard_reason).length;
-    const discardedLeads = leads.filter(l => l.status_id === 'JUNK' || l.discard_reason);
     const newLeads = leads.filter(l => l.status_id === 'NEW').length;
     
     // Converted = leads that have a matching deal or status CONVERTED
     const convertedLeadIds = new Set(deals.filter(d => d.lead_id).map(d => d.lead_id));
     const converted = leads.filter(l => l.status_id === 'CONVERTED' || convertedLeadIds.has(l.id)).length;
-    const convertedLeads = leads.filter(l => l.status_id === 'CONVERTED' || convertedLeadIds.has(l.id));
     
     const conversionRate = totalLeads > 0 ? (converted / totalLeads) * 100 : 0;
 
@@ -153,10 +151,10 @@ export const useMetrics = (leads: CRMLead[], deals: CRMDeal[]) => {
     const retailDeals = deals.filter(d => getDealCategory(d.category_id) === 'Varejo');
     const projectDeals = deals.filter(d => getDealCategory(d.category_id) === 'Projeto');
 
-    // Source attribution for leads
-    const metaLeads = leads.filter(l => isMetaAds(l.source_id));
-    const googleLeads = leads.filter(l => isGoogleAds(l.source_id));
-    const indicacoesLeads = leads.filter(l => isIndicacao(l.source_id));
+    // Source attribution
+    const metaLeads = leads.filter(l => getSourceAttribution(l.source_id) === 'Meta Ads');
+    const googleLeads = leads.filter(l => getSourceAttribution(l.source_id) === 'Google Ads');
+    const organicLeads = leads.filter(l => getSourceAttribution(l.source_id) === 'Orgânico/Outros');
 
     // Financial metrics
     const wonDeals = deals.filter(d => d.stage_id.includes('WON'));
@@ -168,29 +166,20 @@ export const useMetrics = (leads: CRMLead[], deals: CRMDeal[]) => {
     const totalPipelineValue = pipelineDeals.reduce((acc, d) => acc + d.opportunity, 0);
     const averageTicket = wonDeals.length > 0 ? totalWonValue / wonDeals.length : 0;
 
-    // Advanced conversion analysis by source
-    const createSourceData = (sourceLeads: CRMLead[]) => {
-      const sourceConverted = sourceLeads.filter(l => l.status_id === 'CONVERTED' || convertedLeadIds.has(l.id));
-      const varejo = sourceConverted.filter(l => {
-        const deal = deals.find(d => d.lead_id === l.id);
-        return deal && getDealCategory(deal.category_id) === 'Varejo';
-      });
-      const projeto = sourceConverted.filter(l => {
-        const deal = deals.find(d => d.lead_id === l.id);
-        return deal && getDealCategory(deal.category_id) === 'Projeto';
-      });
-      return {
-        leads: sourceLeads,
-        converted: sourceConverted,
-        varejo,
-        projeto,
-        conversionRate: sourceLeads.length > 0 ? (sourceConverted.length / sourceLeads.length) * 100 : 0,
-      };
-    };
-
-    const googleData = createSourceData(googleLeads);
-    const metaData = createSourceData(metaLeads);
-    const indicacoesData = createSourceData(indicacoesLeads);
+    // Conversion analysis by source
+    const convertedLeads = leads.filter(l => l.status_id === 'CONVERTED' || convertedLeadIds.has(l.id));
+    const googleConvertedLeads = convertedLeads.filter(l => isGoogleAds(l.source_id));
+    const otherConvertedLeads = convertedLeads.filter(l => !isGoogleAds(l.source_id));
+    
+    // Google leads categorization by deal type
+    const googleConvertedVarejo = googleConvertedLeads.filter(l => {
+      const deal = deals.find(d => d.lead_id === l.id);
+      return deal && getDealCategory(deal.category_id) === 'Varejo';
+    });
+    const googleConvertedProjeto = googleConvertedLeads.filter(l => {
+      const deal = deals.find(d => d.lead_id === l.id);
+      return deal && getDealCategory(deal.category_id) === 'Projeto';
+    });
 
     // Percentages
     const inProgressPercent = totalLeads > 0 ? ((inProgress / totalLeads) * 100).toFixed(1) : '0';
@@ -204,10 +193,8 @@ export const useMetrics = (leads: CRMLead[], deals: CRMDeal[]) => {
       inProgressPercent,
       discarded,
       discardedPercent,
-      discardedLeads,
       converted,
       convertedPercent,
-      convertedLeads,
       conversionRate,
       quoted,
       quotedPercent,
@@ -217,7 +204,7 @@ export const useMetrics = (leads: CRMLead[], deals: CRMDeal[]) => {
       projectDeals,
       metaLeads,
       googleLeads,
-      indicacoesLeads,
+      organicLeads,
       // Financial
       wonDeals,
       lostDeals,
@@ -226,10 +213,12 @@ export const useMetrics = (leads: CRMLead[], deals: CRMDeal[]) => {
       totalLostValue,
       totalPipelineValue,
       averageTicket,
-      // Advanced conversion analysis
-      googleData,
-      metaData,
-      indicacoesData,
+      // Conversion analysis
+      convertedLeads,
+      googleConvertedLeads,
+      otherConvertedLeads,
+      googleConvertedVarejo,
+      googleConvertedProjeto,
     };
   }, [leads, deals]);
 };

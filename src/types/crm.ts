@@ -41,19 +41,17 @@ export const DEAL_CATEGORY_MAP: Record<string, string> = {
   '298': 'Projeto',
 };
 
-// Source mapping - fontes reais do Bitrix (complete list)
+// Source mapping - fontes reais do Bitrix
 export const SOURCE_MAP: Record<string, string> = {
-  // Meta Ads
   'UC_HCJB1D': 'Meta Ads',
-  'FB_': 'Facebook',
-  'IG_': 'Instagram',
+  'FB_': 'Meta Ads',
+  'IG_': 'Meta Ads',
   'META_': 'Meta Ads',
-  'FACEBOOK': 'Facebook',
-  'INSTAGRAM': 'Instagram',
-  // Google Ads
-  'GOOGLE_': 'Google',
-  'GADS_': 'Google',
-  'UC_GOOGLE': 'Google',
+  'FACEBOOK': 'Meta Ads',
+  'INSTAGRAM': 'Meta Ads',
+  'GOOGLE_': 'Google Ads',
+  'GADS_': 'Google Ads',
+  'UC_GOOGLE': 'Google Ads',
   // Fontes detalhadas
   'PROSPECCAO': 'Prospecção',
   'INDICACAO_AMIGO': 'Indicação Amigo',
@@ -79,7 +77,6 @@ export const ALL_SOURCES = [
   'Prospecção',
   'Google',
   'Instagram',
-  'Facebook',
   'Indicação Amigo',
   'Indicação Profissional',
   'CFA',
@@ -87,19 +84,20 @@ export const ALL_SOURCES = [
   'Vitrine/Carro',
   'Encarte/Outdoor',
   'Eventos',
+  'Facebook',
   'Ativação Relac.',
   'Corporativo',
   'Site',
   'LTV',
   'Busca orgânica',
   'Meta Ads',
+  'Google Ads',
 ];
 
-// Source attribution groups
+// Source attribution
 export const SOURCE_ATTRIBUTION = {
   META_ADS: ['UC_HCJB1D', 'FB_', 'IG_', 'META_', 'FACEBOOK', 'INSTAGRAM'],
   GOOGLE_ADS: ['GOOGLE_', 'GADS_', 'UC_GOOGLE'],
-  INDICACOES: ['INDICACAO_AMIGO', 'INDICACAO_PROFISSIONAL', 'REFERRAL'],
 };
 
 // Helper functions
@@ -115,17 +113,10 @@ export const isGoogleAds = (sourceId: string): boolean => {
   );
 };
 
-export const isIndicacao = (sourceId: string): boolean => {
-  return SOURCE_ATTRIBUTION.INDICACOES.some(prefix => 
-    sourceId.toUpperCase().includes(prefix)
-  );
-};
-
 export const getSourceAttribution = (sourceId: string): string => {
   if (isMetaAds(sourceId)) return 'Meta Ads';
-  if (isGoogleAds(sourceId)) return 'Google';
-  if (isIndicacao(sourceId)) return 'Indicações';
-  return getDetailedSource(sourceId);
+  if (isGoogleAds(sourceId)) return 'Google Ads';
+  return 'Orgânico/Outros';
 };
 
 export const getDetailedSource = (sourceId: string): string => {
@@ -139,8 +130,7 @@ export const getDetailedSource = (sourceId: string): string => {
     }
   }
   
-  // Return the sourceId itself if no mapping (never "Orgânico/Outros")
-  return sourceId;
+  return 'Orgânico/Outros';
 };
 
 export const getDealCategory = (categoryId: string): string => {

@@ -10,8 +10,6 @@ import { DrillDownModal } from '@/components/dashboard/DrillDownModal';
 import { FinancialSection } from '@/components/dashboard/FinancialSection';
 import { BrazilHeatMap } from '@/components/dashboard/BrazilHeatMap';
 import { ConversionAnalysis } from '@/components/dashboard/ConversionAnalysis';
-import { DiscardAnalysis } from '@/components/dashboard/DiscardAnalysis';
-import { PerformanceTimeline } from '@/components/dashboard/PerformanceTimeline';
 import { useDataFetch, useMetrics, useGeographicData } from '@/hooks/useDataFetch';
 import { CRMLead, CRMDeal } from '@/types/crm';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -71,10 +69,12 @@ export default function Dashboard() {
     openModal('Leads em Atendimento', inProgressLeads, 'lead', false, true);
   };
   const handleDiscardedClick = () => {
-    openModal('Leads Descartados', metrics.discardedLeads, 'lead', true, true);
+    const discardedLeads = leads.filter(l => l.status_id === 'JUNK' || l.discard_reason);
+    openModal('Leads Descartados', discardedLeads, 'lead', true, true);
   };
   const handleConvertedClick = () => {
-    openModal('Leads Convertidos', metrics.convertedLeads, 'lead', false, true);
+    const convertedLeads = leads.filter(l => l.status_id === 'CONVERTED');
+    openModal('Leads Convertidos', convertedLeads, 'lead', false, true);
   };
   const handleQuotedClick = () => openModal('Negócios Orçados', metrics.quotedDeals, 'deal', false, true);
 
@@ -99,11 +99,6 @@ export default function Dashboard() {
   // Conversion analysis click handler
   const handleConversionAnalysisClick = (title: string, analysisLeads: CRMLead[]) => {
     openModal(title, analysisLeads, 'lead', false, true);
-  };
-
-  // Discard analysis click handler
-  const handleDiscardReasonClick = (reason: string, reasonLeads: CRMLead[]) => {
-    openModal(`Descartados - ${reason}`, reasonLeads, 'lead', true, true);
   };
 
   if (error) {
@@ -199,18 +194,6 @@ export default function Dashboard() {
           />
         )}
 
-        {/* Performance Timeline */}
-        {isLoading ? (
-          <Skeleton className="h-[400px] rounded-lg" />
-        ) : (
-          <PerformanceTimeline
-            leads={leads}
-            deals={deals}
-            startDate={dateRange.startDate}
-            endDate={dateRange.endDate}
-          />
-        )}
-
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {isLoading ? (
@@ -246,25 +229,16 @@ export default function Dashboard() {
                 onStateClick={handleStateClick}
               />
               <ConversionAnalysis
-                googleData={metrics.googleData}
-                metaData={metrics.metaData}
-                indicacoesData={metrics.indicacoesData}
+                googleConvertedLeads={metrics.googleConvertedLeads}
+                otherConvertedLeads={metrics.otherConvertedLeads}
+                googleConvertedVarejo={metrics.googleConvertedVarejo}
+                googleConvertedProjeto={metrics.googleConvertedProjeto}
                 totalConverted={metrics.converted}
                 onSegmentClick={handleConversionAnalysisClick}
               />
             </>
           )}
         </div>
-
-        {/* Discard Analysis */}
-        {isLoading ? (
-          <Skeleton className="h-[400px] rounded-lg" />
-        ) : (
-          <DiscardAnalysis
-            discardedLeads={metrics.discardedLeads}
-            onReasonClick={handleDiscardReasonClick}
-          />
-        )}
 
         {/* Leads Table */}
         <div className="bg-card rounded-lg border border-border p-6">
