@@ -1,7 +1,8 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import * as echarts from 'echarts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CRMLead, STATE_NAMES } from '@/types/crm';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CRMLead, STATE_NAMES, ALL_SOURCES, getDetailedSource } from '@/types/crm';
 
 // Brazil GeoJSON (simplified coordinates for each state)
 const brazilGeoJson = {
@@ -45,16 +46,48 @@ interface BrazilHeatMapProps {
 export function BrazilHeatMap({ stateData, onStateClick }: BrazilHeatMapProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
+  const [localSourceFilter, setLocalSourceFilter] = useState('Todos');
+
+  // Filter data by local source
+  const filteredStateData = useMemo(() => {
+    if (localSourceFilter === 'Todos') return stateData;
+
+    const filtered: Record<string, { total: number; sources: Record<string, number>; leads: CRMLead[] }> = {};
+    
+    Object.entries(stateData).forEach(([uf, data]) => {
+      const matchingLeads = data.leads.filter(lead => {
+        const detailedSource = getDetailedSource(lead.source_id);
+        return detailedSource === localSourceFilter || 
+               detailedSource.toLowerCase().includes(localSourceFilter.toLowerCase());
+      });
+      
+      if (matchingLeads.length > 0) {
+        const sources: Record<string, number> = {};
+        matchingLeads.forEach(lead => {
+          const source = getDetailedSource(lead.source_id);
+          sources[source] = (sources[source] || 0) + 1;
+        });
+        
+        filtered[uf] = {
+          total: matchingLeads.length,
+          sources,
+          leads: matchingLeads,
+        };
+      }
+    });
+    
+    return filtered;
+  }, [stateData, localSourceFilter]);
 
   const mapData = useMemo(() => {
-    return Object.entries(stateData).map(([uf, data]) => ({
+    return Object.entries(filteredStateData).map(([uf, data]) => ({
       name: STATE_NAMES[uf] || uf,
       value: data.total,
       uf,
       sources: data.sources,
       leads: data.leads,
     }));
-  }, [stateData]);
+  }, [filteredStateData]);
 
   const maxValue = useMemo(() => {
     return Math.max(...mapData.map(d => d.value), 1);
@@ -179,11 +212,21 @@ export function BrazilHeatMap({ stateData, onStateClick }: BrazilHeatMapProps) {
 
   return (
     <Card className="h-full">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-lg">Distribuição Geográfica - Leads Convertidos</CardTitle>
+        <Select value={localSourceFilter} onValueChange={setLocalSourceFilter}>
+          <SelectTrigger className="w-[160px] h-8 text-xs">
+            <SelectValue placeholder="Filtrar fonte" />
+          </SelectTrigger>
+          <SelectContent>
+            {ALL_SOURCES.map(source => (
+              <SelectItem key={source} value={source}>{source}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
-        <div ref={chartRef} className="w-full h-[400px]" />
+        <div ref={chartRef} className="w-full h-[350px]" />
         
         {/* Top states summary */}
         <div className="mt-4 grid grid-cols-3 gap-2">
