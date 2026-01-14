@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CRMLead, CRMDeal, getLeadStatusInfo, getDealCategory, getSourceAttribution } from '@/types/crm';
+import { CRMLead, CRMDeal, getLeadStatusInfo, getDealCategory, getDetailedSource } from '@/types/crm';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -98,8 +98,8 @@ export function DrillDownModal({
                   {showSource && (
                     <TableCell className="text-muted-foreground text-sm">
                       {isLead(item) 
-                        ? getSourceAttribution(item.source_id)
-                        : (item as CRMDeal).source_id ? getSourceAttribution((item as CRMDeal).source_id!) : '-'
+                        ? getDetailedSource(item.source_id)
+                        : (item as CRMDeal).source_id ? getDetailedSource((item as CRMDeal).source_id!) : '-'
                       }
                     </TableCell>
                   )}
