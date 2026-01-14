@@ -5,9 +5,8 @@ import { cn } from '@/lib/utils';
 interface KPICardProps {
   title: string;
   value: string | number;
-  subtitle?: string;
+  percentage?: string;
   icon: ReactNode;
-  trend?: { value: number; isPositive: boolean };
   variant?: 'default' | 'success' | 'warning' | 'destructive' | 'info';
   onClick?: () => void;
 }
@@ -28,7 +27,7 @@ const iconStyles = {
   info: 'bg-info/20 text-info',
 };
 
-export function KPICard({ title, value, subtitle, icon, trend, variant = 'default', onClick }: KPICardProps) {
+export function KPICard({ title, value, percentage, icon, variant = 'default', onClick }: KPICardProps) {
   return (
     <Card 
       className={cn(
@@ -44,18 +43,12 @@ export function KPICard({ title, value, subtitle, icon, trend, variant = 'defaul
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-foreground">{value}</span>
-              {trend && (
-                <span className={cn(
-                  'text-sm font-medium',
-                  trend.isPositive ? 'text-primary' : 'text-destructive'
-                )}>
-                  {trend.isPositive ? '+' : ''}{trend.value}%
+              {percentage && (
+                <span className="text-sm font-medium text-primary">
+                  {percentage}%
                 </span>
               )}
             </div>
-            {subtitle && (
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
-            )}
           </div>
           <div className={cn('p-3 rounded-lg', iconStyles[variant])}>
             {icon}

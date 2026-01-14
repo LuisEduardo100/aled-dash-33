@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { CRMLead, CRMDeal, getSourceAttribution, getDealCategory } from '@/types/crm';
+import { CRMLead, CRMDeal, getSourceAttribution, getDealCategory, getDetailedSource, isGoogleAds } from '@/types/crm';
 import { mockLeads, mockDeals } from '@/data/mockData';
 import { API_CONFIG } from '@/config/api';
 
@@ -41,7 +41,7 @@ export const fetchDeals = async (): Promise<CRMDeal[]> => {
   return response.json();
 };
 
-export const useDataFetch = (dateFilter?: DateFilter): DataFetchResult => {
+export const useDataFetch = (dateFilter?: DateFilter, sourceFilter?: string): DataFetchResult => {
   const [leads, setLeads] = useState<CRMLead[]>([]);
   const [deals, setDeals] = useState<CRMDeal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,24 +70,55 @@ export const useDataFetch = (dateFilter?: DateFilter): DataFetchResult => {
     loadData();
   }, []);
 
-  // Filter data by date range
+  // Filter data by date range and source
   const filteredLeads = useMemo(() => {
-    if (!dateFilter?.startDate || !dateFilter?.endDate) return leads;
+    let filtered = [...leads];
     
-    return leads.filter(lead => {
-      const leadDate = new Date(lead.date_create);
-      return leadDate >= dateFilter.startDate! && leadDate <= dateFilter.endDate!;
-    });
-  }, [leads, dateFilter]);
+    // Date filter
+    if (dateFilter?.startDate && dateFilter?.endDate) {
+      filtered = filtered.filter(lead => {
+        const leadDate = new Date(lead.date_create);
+        return leadDate >= dateFilter.startDate! && leadDate <= dateFilter.endDate!;
+      });
+    }
+    
+    // Source filter
+    if (sourceFilter && sourceFilter !== 'Todos') {
+      filtered = filtered.filter(lead => {
+        const detailedSource = getDetailedSource(lead.source_id);
+        const attribution = getSourceAttribution(lead.source_id);
+        return detailedSource === sourceFilter || attribution === sourceFilter ||
+               lead.source_id.toLowerCase().includes(sourceFilter.toLowerCase());
+      });
+    }
+    
+    return filtered;
+  }, [leads, dateFilter, sourceFilter]);
 
   const filteredDeals = useMemo(() => {
-    if (!dateFilter?.startDate || !dateFilter?.endDate) return deals;
+    let filtered = [...deals];
     
-    return deals.filter(deal => {
-      const dealDate = new Date(deal.date_create);
-      return dealDate >= dateFilter.startDate! && dealDate <= dateFilter.endDate!;
-    });
-  }, [deals, dateFilter]);
+    // Date filter
+    if (dateFilter?.startDate && dateFilter?.endDate) {
+      filtered = filtered.filter(deal => {
+        const dealDate = new Date(deal.date_create);
+        return dealDate >= dateFilter.startDate! && dealDate <= dateFilter.endDate!;
+      });
+    }
+    
+    // Source filter
+    if (sourceFilter && sourceFilter !== 'Todos') {
+      filtered = filtered.filter(deal => {
+        if (!deal.source_id) return false;
+        const detailedSource = getDetailedSource(deal.source_id);
+        const attribution = getSourceAttribution(deal.source_id);
+        return detailedSource === sourceFilter || attribution === sourceFilter ||
+               deal.source_id.toLowerCase().includes(sourceFilter.toLowerCase());
+      });
+    }
+    
+    return filtered;
+  }, [deals, dateFilter, sourceFilter]);
 
   return {
     leads: filteredLeads,
@@ -104,12 +135,17 @@ export const useMetrics = (leads: CRMLead[], deals: CRMDeal[]) => {
     const totalLeads = leads.length;
     const inProgress = leads.filter(l => l.status_id === 'IN_PROCESS').length;
     const discarded = leads.filter(l => l.status_id === 'JUNK' || l.discard_reason).length;
+    const newLeads = leads.filter(l => l.status_id === 'NEW').length;
     
-    // Converted = leads that have a matching deal
+    // Converted = leads that have a matching deal or status CONVERTED
     const convertedLeadIds = new Set(deals.filter(d => d.lead_id).map(d => d.lead_id));
     const converted = leads.filter(l => l.status_id === 'CONVERTED' || convertedLeadIds.has(l.id)).length;
     
     const conversionRate = totalLeads > 0 ? (converted / totalLeads) * 100 : 0;
+
+    // Orçados = deals com opportunity > 0
+    const quotedDeals = deals.filter(d => d.opportunity > 0);
+    const quoted = quotedDeals.length;
 
     // Deal category breakdown
     const retailDeals = deals.filter(d => getDealCategory(d.category_id) === 'Varejo');
@@ -120,18 +156,95 @@ export const useMetrics = (leads: CRMLead[], deals: CRMDeal[]) => {
     const googleLeads = leads.filter(l => getSourceAttribution(l.source_id) === 'Google Ads');
     const organicLeads = leads.filter(l => getSourceAttribution(l.source_id) === 'Orgânico/Outros');
 
+    // Financial metrics
+    const wonDeals = deals.filter(d => d.stage_id.includes('WON'));
+    const lostDeals = deals.filter(d => d.stage_id.includes('LOSE'));
+    const pipelineDeals = deals.filter(d => !d.stage_id.includes('WON') && !d.stage_id.includes('LOSE'));
+    
+    const totalWonValue = wonDeals.reduce((acc, d) => acc + d.opportunity, 0);
+    const totalLostValue = lostDeals.reduce((acc, d) => acc + d.opportunity, 0);
+    const totalPipelineValue = pipelineDeals.reduce((acc, d) => acc + d.opportunity, 0);
+    const averageTicket = wonDeals.length > 0 ? totalWonValue / wonDeals.length : 0;
+
+    // Conversion analysis by source
+    const convertedLeads = leads.filter(l => l.status_id === 'CONVERTED' || convertedLeadIds.has(l.id));
+    const googleConvertedLeads = convertedLeads.filter(l => isGoogleAds(l.source_id));
+    const otherConvertedLeads = convertedLeads.filter(l => !isGoogleAds(l.source_id));
+    
+    // Google leads categorization by deal type
+    const googleConvertedVarejo = googleConvertedLeads.filter(l => {
+      const deal = deals.find(d => d.lead_id === l.id);
+      return deal && getDealCategory(deal.category_id) === 'Varejo';
+    });
+    const googleConvertedProjeto = googleConvertedLeads.filter(l => {
+      const deal = deals.find(d => d.lead_id === l.id);
+      return deal && getDealCategory(deal.category_id) === 'Projeto';
+    });
+
+    // Percentages
+    const inProgressPercent = totalLeads > 0 ? ((inProgress / totalLeads) * 100).toFixed(1) : '0';
+    const discardedPercent = totalLeads > 0 ? ((discarded / totalLeads) * 100).toFixed(1) : '0';
+    const convertedPercent = totalLeads > 0 ? ((converted / totalLeads) * 100).toFixed(1) : '0';
+    const quotedPercent = deals.length > 0 ? ((quoted / deals.length) * 100).toFixed(1) : '0';
+
     return {
       totalLeads,
       inProgress,
+      inProgressPercent,
       discarded,
+      discardedPercent,
       converted,
+      convertedPercent,
       conversionRate,
+      quoted,
+      quotedPercent,
+      quotedDeals,
+      newLeads,
       retailDeals,
       projectDeals,
       metaLeads,
       googleLeads,
       organicLeads,
-      newLeads: leads.filter(l => l.status_id === 'NEW').length,
+      // Financial
+      wonDeals,
+      lostDeals,
+      pipelineDeals,
+      totalWonValue,
+      totalLostValue,
+      totalPipelineValue,
+      averageTicket,
+      // Conversion analysis
+      convertedLeads,
+      googleConvertedLeads,
+      otherConvertedLeads,
+      googleConvertedVarejo,
+      googleConvertedProjeto,
     };
+  }, [leads, deals]);
+};
+
+// Geographic distribution hook
+export const useGeographicData = (leads: CRMLead[], deals: CRMDeal[]) => {
+  return useMemo(() => {
+    // Get converted leads
+    const convertedLeadIds = new Set(deals.filter(d => d.lead_id).map(d => d.lead_id));
+    const convertedLeads = leads.filter(l => l.status_id === 'CONVERTED' || convertedLeadIds.has(l.id));
+    
+    // Group by state
+    const stateData: Record<string, { total: number; sources: Record<string, number>; leads: CRMLead[] }> = {};
+    
+    convertedLeads.forEach(lead => {
+      const uf = lead.uf || 'N/D';
+      if (!stateData[uf]) {
+        stateData[uf] = { total: 0, sources: {}, leads: [] };
+      }
+      stateData[uf].total++;
+      stateData[uf].leads.push(lead);
+      
+      const source = getSourceAttribution(lead.source_id);
+      stateData[uf].sources[source] = (stateData[uf].sources[source] || 0) + 1;
+    });
+    
+    return stateData;
   }, [leads, deals]);
 };

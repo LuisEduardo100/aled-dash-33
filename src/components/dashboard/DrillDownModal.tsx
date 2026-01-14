@@ -1,10 +1,10 @@
-import { ExternalLink, MessageSquare, X } from 'lucide-react';
+import { ExternalLink, MessageSquare } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CRMLead, CRMDeal, getLeadStatusInfo, getDealCategory } from '@/types/crm';
+import { CRMLead, CRMDeal, getLeadStatusInfo, getDealCategory, getSourceAttribution } from '@/types/crm';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -14,9 +14,19 @@ interface DrillDownModalProps {
   title: string;
   data: (CRMLead | CRMDeal)[];
   type: 'lead' | 'deal';
+  showDiscardReason?: boolean;
+  showSource?: boolean;
 }
 
-export function DrillDownModal({ isOpen, onClose, title, data, type }: DrillDownModalProps) {
+export function DrillDownModal({ 
+  isOpen, 
+  onClose, 
+  title, 
+  data, 
+  type,
+  showDiscardReason = false,
+  showSource = false,
+}: DrillDownModalProps) {
   const isLead = (item: CRMLead | CRMDeal): item is CRMLead => {
     return 'status_id' in item;
   };
@@ -40,7 +50,7 @@ export function DrillDownModal({ isOpen, onClose, title, data, type }: DrillDown
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
+      <DialogContent className="max-w-5xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>{title}</span>
@@ -55,6 +65,8 @@ export function DrillDownModal({ isOpen, onClose, title, data, type }: DrillDown
                 <TableHead>Nome</TableHead>
                 <TableHead>{type === 'lead' ? 'Telefone' : 'Valor'}</TableHead>
                 <TableHead>{type === 'lead' ? 'Status' : 'Categoria'}</TableHead>
+                {showSource && <TableHead>Fonte</TableHead>}
+                {showDiscardReason && <TableHead>Motivo Descarte</TableHead>}
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -83,6 +95,22 @@ export function DrillDownModal({ isOpen, onClose, title, data, type }: DrillDown
                       </Badge>
                     )}
                   </TableCell>
+                  {showSource && (
+                    <TableCell className="text-muted-foreground text-sm">
+                      {isLead(item) 
+                        ? getSourceAttribution(item.source_id)
+                        : (item as CRMDeal).source_id ? getSourceAttribution((item as CRMDeal).source_id!) : '-'
+                      }
+                    </TableCell>
+                  )}
+                  {showDiscardReason && isLead(item) && (
+                    <TableCell className="text-muted-foreground text-sm">
+                      {item.discard_reason || '-'}
+                    </TableCell>
+                  )}
+                  {showDiscardReason && !isLead(item) && (
+                    <TableCell>-</TableCell>
+                  )}
                   <TableCell className="text-muted-foreground">
                     {format(new Date(item.date_create), 'dd/MM/yyyy', { locale: ptBR })}
                   </TableCell>
