@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, UserCheck, UserX, TrendingUp, Percent } from 'lucide-react';
+import { Users, UserCheck, UserX, TrendingUp, FileText } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { KPICard } from '@/components/dashboard/KPICard';
@@ -7,7 +7,10 @@ import { ConversionChart } from '@/components/dashboard/ConversionChart';
 import { SourceChart } from '@/components/dashboard/SourceChart';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';
 import { DrillDownModal } from '@/components/dashboard/DrillDownModal';
-import { useDataFetch, useMetrics } from '@/hooks/useDataFetch';
+import { FinancialSection } from '@/components/dashboard/FinancialSection';
+import { BrazilHeatMap } from '@/components/dashboard/BrazilHeatMap';
+import { ConversionAnalysis } from '@/components/dashboard/ConversionAnalysis';
+import { useDataFetch, useMetrics, useGeographicData } from '@/hooks/useDataFetch';
 import { CRMLead, CRMDeal } from '@/types/crm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { startOfMonth, endOfMonth } from 'date-fns';
@@ -17,6 +20,8 @@ interface ModalState {
   title: string;
   data: (CRMLead | CRMDeal)[];
   type: 'lead' | 'deal';
+  showDiscardReason?: boolean;
+  showSource?: boolean;
 }
 
 export default function Dashboard() {
@@ -24,24 +29,33 @@ export default function Dashboard() {
     startDate: startOfMonth(new Date()),
     endDate: endOfMonth(new Date())
   });
+  const [sourceFilter, setSourceFilter] = useState('Todos');
 
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     title: '',
     data: [],
-    type: 'lead'
+    type: 'lead',
+    showDiscardReason: false,
+    showSource: false,
   });
 
-  const { leads, deals, isLoading, error, refetch } = useDataFetch(dateRange);
+  const { leads, deals, isLoading, error, refetch } = useDataFetch(dateRange, sourceFilter);
   const metrics = useMetrics(leads, deals);
+  const geoData = useGeographicData(leads, deals);
 
-  // Apply dark mode
   useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
 
-  const openModal = (title: string, data: (CRMLead | CRMDeal)[], type: 'lead' | 'deal') => {
-    setModalState({ isOpen: true, title, data, type });
+  const openModal = (
+    title: string, 
+    data: (CRMLead | CRMDeal)[], 
+    type: 'lead' | 'deal',
+    showDiscardReason = false,
+    showSource = false
+  ) => {
+    setModalState({ isOpen: true, title, data, type, showDiscardReason, showSource });
   };
 
   const closeModal = () => {
@@ -49,32 +63,42 @@ export default function Dashboard() {
   };
 
   // KPI click handlers
-  const handleTotalLeadsClick = () => {
-    openModal('Todos os Leads', leads, 'lead');
-  };
-
+  const handleTotalLeadsClick = () => openModal('Todos os Leads', leads, 'lead', false, true);
   const handleInProgressClick = () => {
     const inProgressLeads = leads.filter(l => l.status_id === 'IN_PROCESS');
-    openModal('Leads em Atendimento', inProgressLeads, 'lead');
+    openModal('Leads em Atendimento', inProgressLeads, 'lead', false, true);
   };
-
   const handleDiscardedClick = () => {
     const discardedLeads = leads.filter(l => l.status_id === 'JUNK' || l.discard_reason);
-    openModal('Leads Descartados', discardedLeads, 'lead');
+    openModal('Leads Descartados', discardedLeads, 'lead', true, true);
   };
-
   const handleConvertedClick = () => {
     const convertedLeads = leads.filter(l => l.status_id === 'CONVERTED');
-    openModal('Leads Convertidos', convertedLeads, 'lead');
+    openModal('Leads Convertidos', convertedLeads, 'lead', false, true);
   };
+  const handleQuotedClick = () => openModal('Negócios Orçados', metrics.quotedDeals, 'deal', false, true);
 
   // Chart click handlers
   const handleConversionSegmentClick = (category: string, categoryDeals: CRMDeal[]) => {
-    openModal(`Negócios - ${category}`, categoryDeals, 'deal');
+    openModal(`Negócios - ${category}`, categoryDeals, 'deal', false, true);
+  };
+  const handleSourceBarClick = (source: string, sourceLeads: CRMLead[]) => {
+    openModal(`Leads - ${source}`, sourceLeads, 'lead', false, true);
   };
 
-  const handleSourceBarClick = (source: string, sourceLeads: CRMLead[]) => {
-    openModal(`Leads - ${source}`, sourceLeads, 'lead');
+  // Financial click handler
+  const handleFinancialClick = (title: string, financialDeals: CRMDeal[]) => {
+    openModal(title, financialDeals, 'deal', false, true);
+  };
+
+  // Geographic click handler
+  const handleStateClick = (uf: string, stateLeads: CRMLead[]) => {
+    openModal(`Leads Convertidos - ${uf}`, stateLeads, 'lead', false, true);
+  };
+
+  // Conversion analysis click handler
+  const handleConversionAnalysisClick = (title: string, analysisLeads: CRMLead[]) => {
+    openModal(title, analysisLeads, 'lead', false, true);
   };
 
   if (error) {
@@ -97,6 +121,8 @@ export default function Dashboard() {
         onDateRangeChange={setDateRange}
         onRefresh={refetch}
         isLoading={isLoading}
+        sourceFilter={sourceFilter}
+        onSourceFilterChange={setSourceFilter}
       />
 
       <div className="flex-1 overflow-auto p-6 space-y-6">
@@ -111,6 +137,7 @@ export default function Dashboard() {
               <KPICard
                 title="Total de Leads"
                 value={metrics.totalLeads}
+                percentage="100"
                 icon={<Users className="h-5 w-5" />}
                 variant="info"
                 onClick={handleTotalLeadsClick}
@@ -118,7 +145,7 @@ export default function Dashboard() {
               <KPICard
                 title="Em Atendimento"
                 value={metrics.inProgress}
-                subtitle={`${metrics.newLeads} novos`}
+                percentage={metrics.inProgressPercent}
                 icon={<TrendingUp className="h-5 w-5" />}
                 variant="warning"
                 onClick={handleInProgressClick}
@@ -126,6 +153,7 @@ export default function Dashboard() {
               <KPICard
                 title="Descartados"
                 value={metrics.discarded}
+                percentage={metrics.discardedPercent}
                 icon={<UserX className="h-5 w-5" />}
                 variant="destructive"
                 onClick={handleDiscardedClick}
@@ -133,19 +161,38 @@ export default function Dashboard() {
               <KPICard
                 title="Convertidos"
                 value={metrics.converted}
+                percentage={metrics.convertedPercent}
                 icon={<UserCheck className="h-5 w-5" />}
                 variant="success"
                 onClick={handleConvertedClick}
               />
               <KPICard
-                title="Taxa de Conversão"
-                value={`${metrics.conversionRate.toFixed(1)}%`}
-                icon={<Percent className="h-5 w-5" />}
-                variant="success"
+                title="Orçados"
+                value={metrics.quoted}
+                percentage={metrics.quotedPercent}
+                icon={<FileText className="h-5 w-5" />}
+                variant="info"
+                onClick={handleQuotedClick}
               />
             </>
           )}
         </div>
+
+        {/* Financial Section */}
+        {isLoading ? (
+          <Skeleton className="h-40 rounded-lg" />
+        ) : (
+          <FinancialSection
+            wonDeals={metrics.wonDeals}
+            lostDeals={metrics.lostDeals}
+            pipelineDeals={metrics.pipelineDeals}
+            totalWonValue={metrics.totalWonValue}
+            totalLostValue={metrics.totalLostValue}
+            totalPipelineValue={metrics.totalPipelineValue}
+            averageTicket={metrics.averageTicket}
+            onCardClick={handleFinancialClick}
+          />
+        )}
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -168,6 +215,31 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Geographic Map & Conversion Analysis */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-[500px] rounded-lg" />
+              <Skeleton className="h-[500px] rounded-lg" />
+            </>
+          ) : (
+            <>
+              <BrazilHeatMap 
+                stateData={geoData} 
+                onStateClick={handleStateClick}
+              />
+              <ConversionAnalysis
+                googleConvertedLeads={metrics.googleConvertedLeads}
+                otherConvertedLeads={metrics.otherConvertedLeads}
+                googleConvertedVarejo={metrics.googleConvertedVarejo}
+                googleConvertedProjeto={metrics.googleConvertedProjeto}
+                totalConverted={metrics.converted}
+                onSegmentClick={handleConversionAnalysisClick}
+              />
+            </>
+          )}
+        </div>
+
         {/* Leads Table */}
         <div className="bg-card rounded-lg border border-border p-6">
           {isLoading ? (
@@ -185,6 +257,8 @@ export default function Dashboard() {
         title={modalState.title}
         data={modalState.data}
         type={modalState.type}
+        showDiscardReason={modalState.showDiscardReason}
+        showSource={modalState.showSource}
       />
     </DashboardLayout>
   );
