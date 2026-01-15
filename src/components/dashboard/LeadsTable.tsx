@@ -33,7 +33,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
     // Search filter
     if (search) {
       const searchLower = search.toLowerCase();
-      filtered = filtered.filter(lead => 
+      filtered = filtered.filter(lead =>
         lead.title.toLowerCase().includes(searchLower) ||
         lead.phone?.toLowerCase().includes(searchLower)
       );
@@ -104,7 +104,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
   };
 
   const openBitrix = (id: string) => {
-    window.open(`https://aled.bitrix24.com.br/crm/lead/details/${id}/`, '_blank');
+    window.open(`https://atacadaoled.bitrix24.com.br/crm/lead/details/${id}/`, '_blank');
   };
 
   return (
@@ -128,8 +128,8 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
             className="pl-9"
           />
         </div>
-        <Select 
-          value={statusFilter} 
+        <Select
+          value={statusFilter}
           onValueChange={(v) => {
             setStatusFilter(v);
             setCurrentPage(1);
@@ -153,7 +153,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:text-foreground"
                 onClick={() => handleSort('title')}
               >
@@ -163,7 +163,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
                 </div>
               </TableHead>
               <TableHead>Telefone</TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:text-foreground"
                 onClick={() => handleSort('status_id')}
               >
@@ -172,7 +172,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
                   <ArrowUpDown className="h-4 w-4" />
                 </div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:text-foreground"
                 onClick={() => handleSort('source_id')}
               >
@@ -181,7 +181,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
                   <ArrowUpDown className="h-4 w-4" />
                 </div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="cursor-pointer hover:text-foreground"
                 onClick={() => handleSort('date_create')}
               >

@@ -1,14 +1,14 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CRMLead } from '@/types/crm';
+import { SegmentedLead } from '@/types/dashboard';
 
 interface ConversionAnalysisProps {
-  googleConvertedLeads: CRMLead[];
-  otherConvertedLeads: CRMLead[];
-  googleConvertedVarejo: CRMLead[];
-  googleConvertedProjeto: CRMLead[];
+  googleConvertedLeads: SegmentedLead[];
+  otherConvertedLeads: SegmentedLead[];
+  googleConvertedVarejo: SegmentedLead[];
+  googleConvertedProjeto: SegmentedLead[];
   totalConverted: number;
-  onSegmentClick?: (title: string, leads: CRMLead[]) => void;
+  onSegmentClick?: (title: string, leads: SegmentedLead[]) => void;
 }
 
 const COLORS = {
@@ -69,28 +69,28 @@ export function ConversionAnalysis({
           <ResponsiveContainer width="100%" height={120}>
             <BarChart data={sourceData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis 
-                type="number" 
+              <XAxis
+                type="number"
                 tick={{ fill: 'hsl(var(--muted-foreground))' }}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
               />
-              <YAxis 
-                type="category" 
-                dataKey="name" 
+              <YAxis
+                type="category"
+                dataKey="name"
                 tick={{ fill: 'hsl(var(--muted-foreground))' }}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 width={100}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar 
-                dataKey="value" 
+              <Bar
+                dataKey="value"
                 radius={[0, 4, 4, 0]}
                 onClick={(_, index) => onSegmentClick?.(sourceData[index].name, sourceData[index].leads)}
                 style={{ cursor: 'pointer' }}
               >
                 {sourceData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
+                  <Cell
+                    key={`cell-${index}`}
                     fill={COLORS[entry.name as keyof typeof COLORS]}
                   />
                 ))}
@@ -133,8 +133,8 @@ export function ConversionAnalysis({
                     style={{ cursor: 'pointer' }}
                   >
                     {googleBreakdown.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
+                      <Cell
+                        key={`cell-${index}`}
                         fill={COLORS[entry.name as keyof typeof COLORS]}
                         stroke="transparent"
                       />
@@ -151,8 +151,8 @@ export function ConversionAnalysis({
                     onClick={() => onSegmentClick?.(`Google - ${item.name}`, item.leads)}
                   >
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
+                      <div
+                        className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: COLORS[item.name as keyof typeof COLORS] }}
                       />
                       <span className="text-sm text-foreground">{item.name}</span>

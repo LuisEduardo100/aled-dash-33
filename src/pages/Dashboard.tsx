@@ -1,106 +1,163 @@
 import { useState, useEffect } from 'react';
-import { Users, UserCheck, UserX, TrendingUp, FileText } from 'lucide-react';
+import { Users, UserCheck, UserX, TrendingUp, DollarSign, Target, Store, Briefcase, XCircle } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { FilterBar } from '@/components/dashboard/FilterBar';
 import { KPICard } from '@/components/dashboard/KPICard';
+import { DrillDownModal } from '@/components/dashboard/DrillDownModal';
 import { ConversionChart } from '@/components/dashboard/ConversionChart';
 import { SourceChart } from '@/components/dashboard/SourceChart';
-import { LeadsTable } from '@/components/dashboard/LeadsTable';
-import { DrillDownModal } from '@/components/dashboard/DrillDownModal';
-import { FinancialSection } from '@/components/dashboard/FinancialSection';
 import { BrazilHeatMap } from '@/components/dashboard/BrazilHeatMap';
 import { ConversionAnalysis } from '@/components/dashboard/ConversionAnalysis';
-import { useDataFetch, useMetrics, useGeographicData } from '@/hooks/useDataFetch';
-import { CRMLead, CRMDeal } from '@/types/crm';
+import { useFilteredDashboard } from '@/hooks/useFilteredDashboard';
+import { SegmentedLead, SegmentedDeal, DealsByStatus, DateFilter } from '@/types/dashboard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { startOfMonth, endOfMonth } from 'date-fns';
 
+// ========== MODAL STATE TYPES ==========
 interface ModalState {
   isOpen: boolean;
   title: string;
-  data: (CRMLead | CRMDeal)[];
+  data?: SegmentedLead[] | SegmentedDeal[];
   type: 'lead' | 'deal';
+  segmentedData?: DealsByStatus;
   showDiscardReason?: boolean;
   showSource?: boolean;
 }
 
+// ========== HELPERS ==========
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const calcPercentage = (value: number, total: number): string => {
+  if (total === 0) return '0';
+  return ((value / total) * 100).toFixed(1);
+};
+
+// ========== MAIN COMPONENT ==========
 export default function Dashboard() {
-  const [dateRange, setDateRange] = useState<{ startDate: Date | null; endDate: Date | null }>({
+  // Filter state
+  const [dateFilter, setDateFilter] = useState<DateFilter>({
     startDate: startOfMonth(new Date()),
     endDate: endOfMonth(new Date())
   });
   const [sourceFilter, setSourceFilter] = useState('Todos');
 
+  // Modal state
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     title: '',
-    data: [],
     type: 'lead',
     showDiscardReason: false,
-    showSource: false,
+    showSource: true,
   });
 
-  const { leads, deals, isLoading, error, refetch } = useDataFetch(dateRange, sourceFilter);
-  const metrics = useMetrics(leads, deals);
-  const geoData = useGeographicData(leads, deals);
+  // Use the new filtered dashboard hook
+  const {
+    leads,
+    deals,
+    metrics,
+    availableSources,
+    geoData,
+    marketingData,
+    isLoading,
+    error,
+    refetch
+  } = useFilteredDashboard(dateFilter, sourceFilter === 'Todos' ? null : sourceFilter);
 
+  // Dark mode
   useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
 
-  const openModal = (
-    title: string, 
-    data: (CRMLead | CRMDeal)[], 
-    type: 'lead' | 'deal',
-    showDiscardReason = false,
-    showSource = false
-  ) => {
-    setModalState({ isOpen: true, title, data, type, showDiscardReason, showSource });
-  };
-
+  // Modal handlers
   const closeModal = () => {
     setModalState(prev => ({ ...prev, isOpen: false }));
   };
 
-  // KPI click handlers
-  const handleTotalLeadsClick = () => openModal('Todos os Leads', leads, 'lead', false, true);
-  const handleInProgressClick = () => {
-    const inProgressLeads = leads.filter(l => l.status_id === 'IN_PROCESS');
-    openModal('Leads em Atendimento', inProgressLeads, 'lead', false, true);
-  };
-  const handleDiscardedClick = () => {
-    const discardedLeads = leads.filter(l => l.status_id === 'JUNK' || l.discard_reason);
-    openModal('Leads Descartados', discardedLeads, 'lead', true, true);
-  };
-  const handleConvertedClick = () => {
-    const convertedLeads = leads.filter(l => l.status_id === 'CONVERTED');
-    openModal('Leads Convertidos', convertedLeads, 'lead', false, true);
-  };
-  const handleQuotedClick = () => openModal('Negócios Orçados', metrics.quotedDeals, 'deal', false, true);
-
-  // Chart click handlers
-  const handleConversionSegmentClick = (category: string, categoryDeals: CRMDeal[]) => {
-    openModal(`Negócios - ${category}`, categoryDeals, 'deal', false, true);
-  };
-  const handleSourceBarClick = (source: string, sourceLeads: CRMLead[]) => {
-    openModal(`Leads - ${source}`, sourceLeads, 'lead', false, true);
+  // Generic List Openers
+  const openLeadList = (title: string, data: SegmentedLead[], showDiscardReason = false) => {
+    setModalState({
+      isOpen: true,
+      title,
+      data,
+      type: 'lead',
+      showDiscardReason,
+      showSource: true,
+    });
   };
 
-  // Financial click handler
-  const handleFinancialClick = (title: string, financialDeals: CRMDeal[]) => {
-    openModal(title, financialDeals, 'deal', false, true);
+  const openDealList = (title: string, data: SegmentedDeal[]) => {
+    setModalState({
+      isOpen: true,
+      title,
+      data,
+      type: 'deal',
+      showSource: true,
+    });
   };
 
-  // Geographic click handler
-  const handleStateClick = (uf: string, stateLeads: CRMLead[]) => {
-    openModal(`Leads Convertidos - ${uf}`, stateLeads, 'lead', false, true);
+  // Specific Handlers
+  const handleEmAtendimentoClick = () => openLeadList('Leads em Atendimento', leads.em_atendimento);
+  const handleDescartadosClick = () => openLeadList('Leads Descartados', leads.descartados, true);
+  const handleConvertidosClick = () => openLeadList('Leads Convertidos', leads.convertidos);
+  const handleTotalLeadsClick = () => {
+    const allLeads = [...leads.em_atendimento, ...leads.descartados, ...leads.convertidos];
+    openLeadList('Todos os Leads', allLeads);
   };
 
-  // Conversion analysis click handler
-  const handleConversionAnalysisClick = (title: string, analysisLeads: CRMLead[]) => {
-    openModal(title, analysisLeads, 'lead', false, true);
+  const handleVarejoClick = () => {
+    setModalState({
+      isOpen: true,
+      title: 'Negócios - Varejo',
+      type: 'deal',
+      segmentedData: deals.por_segmento.varejo,
+      showSource: true,
+    });
   };
 
+  const handleProjetoClick = () => {
+    setModalState({
+      isOpen: true,
+      title: 'Negócios - Projeto',
+      type: 'deal',
+      segmentedData: deals.por_segmento.projeto,
+      showSource: true,
+    });
+  };
+
+  const handleFaturamentoClick = () => openDealList('Faturamento (Ganhos)', deals.por_status.ganhos);
+  const handlePipelineClick = () => openDealList('Pipeline (Em Andamento)', deals.por_status.andamento);
+  const handlePerdidosDealClick = () => openDealList('Negócios Perdidos', deals.por_status.perdidos);
+
+  // Chart Click Handlers
+  const handleConversionChartClick = (category: string, deals: SegmentedDeal[]) => {
+    openDealList(`Segmento: ${category}`, deals);
+  };
+
+  const handleSourceChartClick = (source: string, leads: SegmentedLead[]) => {
+    openLeadList(`Origem: ${source}`, leads);
+  };
+
+  const handleStateClick = (uf: string, leads: SegmentedLead[]) => {
+    openLeadList(`Estado: ${uf}`, leads);
+  };
+
+  const handleConversionAnalysisClick = (title: string, leads: SegmentedLead[]) => {
+    openLeadList(title, leads);
+  };
+
+  // Combined data for generic charts
+  const allLeads = [...leads.em_atendimento, ...leads.descartados, ...leads.convertidos];
+  const allDeals = [...deals.por_status.ganhos, ...deals.por_status.perdidos, ...deals.por_status.andamento];
+
+  // ========== ERROR STATE ==========
   if (error) {
     return (
       <DashboardLayout>
@@ -114,24 +171,35 @@ export default function Dashboard() {
     );
   }
 
+  // Calculate segment totals to avoid mismatch with modal
+  const varejoTotal = deals.por_segmento.varejo.ganhos.length +
+    deals.por_segmento.varejo.andamento.length +
+    deals.por_segmento.varejo.perdidos.length;
+
+  const projetoTotal = deals.por_segmento.projeto.ganhos.length +
+    deals.por_segmento.projeto.andamento.length +
+    deals.por_segmento.projeto.perdidos.length;
+
   return (
     <DashboardLayout>
-      <DashboardHeader
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
-        onRefresh={refetch}
-        isLoading={isLoading}
-        sourceFilter={sourceFilter}
-        onSourceFilterChange={setSourceFilter}
-      />
+      {/* Filter Bar */}
+      <div className="px-6 pt-6">
+        <FilterBar
+          dateFilter={dateFilter}
+          onDateFilterChange={setDateFilter}
+          sourceFilter={sourceFilter}
+          onSourceFilterChange={setSourceFilter}
+          availableSources={availableSources}
+          onRefresh={refetch}
+          isLoading={isLoading}
+        />
+      </div>
 
       <div className="flex-1 overflow-auto p-6 space-y-6">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Row 1: Lead KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {isLoading ? (
-            Array(5).fill(0).map((_, i) => (
-              <Skeleton key={i} className="h-32 rounded-lg" />
-            ))
+            Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)
           ) : (
             <>
               <KPICard
@@ -144,108 +212,158 @@ export default function Dashboard() {
               />
               <KPICard
                 title="Em Atendimento"
-                value={metrics.inProgress}
-                percentage={metrics.inProgressPercent}
+                value={metrics.emAtendimentoCount}
+                percentage={calcPercentage(metrics.emAtendimentoCount, metrics.totalLeads)}
                 icon={<TrendingUp className="h-5 w-5" />}
                 variant="warning"
-                onClick={handleInProgressClick}
+                onClick={handleEmAtendimentoClick}
               />
               <KPICard
                 title="Descartados"
-                value={metrics.discarded}
-                percentage={metrics.discardedPercent}
+                value={metrics.descartadosCount}
+                percentage={calcPercentage(metrics.descartadosCount, metrics.totalLeads)}
                 icon={<UserX className="h-5 w-5" />}
                 variant="destructive"
-                onClick={handleDiscardedClick}
+                onClick={handleDescartadosClick}
               />
               <KPICard
                 title="Convertidos"
-                value={metrics.converted}
-                percentage={metrics.convertedPercent}
+                value={metrics.convertidosCount}
+                percentage={calcPercentage(metrics.convertidosCount, metrics.totalLeads)}
                 icon={<UserCheck className="h-5 w-5" />}
                 variant="success"
-                onClick={handleConvertedClick}
-              />
-              <KPICard
-                title="Orçados"
-                value={metrics.quoted}
-                percentage={metrics.quotedPercent}
-                icon={<FileText className="h-5 w-5" />}
-                variant="info"
-                onClick={handleQuotedClick}
+                onClick={handleConvertidosClick}
               />
             </>
           )}
         </div>
 
-        {/* Financial Section */}
-        {isLoading ? (
-          <Skeleton className="h-40 rounded-lg" />
-        ) : (
-          <FinancialSection
-            wonDeals={metrics.wonDeals}
-            lostDeals={metrics.lostDeals}
-            pipelineDeals={metrics.pipelineDeals}
-            totalWonValue={metrics.totalWonValue}
-            totalLostValue={metrics.totalLostValue}
-            totalPipelineValue={metrics.totalPipelineValue}
-            averageTicket={metrics.averageTicket}
-            onCardClick={handleFinancialClick}
-          />
-        )}
-
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Row 2: Financial KPI Cards (Faturamento, Pipeline, Perdidos, Ticket Médio) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {isLoading ? (
-            <>
-              <Skeleton className="h-[450px] rounded-lg" />
-              <Skeleton className="h-[450px] rounded-lg" />
-            </>
+            Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)
           ) : (
             <>
-              <ConversionChart 
-                deals={deals} 
-                onSegmentClick={handleConversionSegmentClick} 
-              />
-              <SourceChart 
-                leads={leads} 
-                onBarClick={handleSourceBarClick} 
-              />
+              {/* Faturamento */}
+              <Card className="cursor-pointer hover:scale-[1.02] transition-all border-primary/50 bg-primary/5" onClick={handleFaturamentoClick}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento</CardTitle>
+                  <div className="p-2 rounded-lg bg-primary/20 text-primary"><DollarSign className="h-5 w-5" /></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(metrics.faturamentoTotal)}</div>
+                  <p className="text-xs text-muted-foreground">{metrics.totalDealsGanhos} negócios ganhos</p>
+                </CardContent>
+              </Card>
+
+              {/* Pipeline */}
+              <Card className="cursor-pointer hover:scale-[1.02] transition-all border-warning/50 bg-warning/5" onClick={handlePipelineClick}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Pipeline</CardTitle>
+                  <div className="p-2 rounded-lg bg-warning/20 text-warning"><Target className="h-5 w-5" /></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(metrics.pipelineTotal)}</div>
+                  <p className="text-xs text-muted-foreground">{metrics.totalDealsAndamento} em andamento</p>
+                </CardContent>
+              </Card>
+
+              {/* Perdidos */}
+              <Card className="cursor-pointer hover:scale-[1.02] transition-all border-destructive/50 bg-destructive/5" onClick={handlePerdidosDealClick}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Perdidos</CardTitle>
+                  <div className="p-2 rounded-lg bg-destructive/20 text-destructive"><XCircle className="h-5 w-5" /></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(metrics.perdidosTotal)}</div>
+                  <p className="text-xs text-muted-foreground">{metrics.totalDealsPerdidos} negócios perdidos</p>
+                </CardContent>
+              </Card>
+
+              {/* Ticket Médio */}
+              <Card className="hover:scale-[1.02] transition-all border-secondary/50 bg-secondary/5">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Ticket Médio</CardTitle>
+                  <div className="p-2 rounded-lg bg-secondary/20 text-secondary-foreground"><DollarSign className="h-5 w-5" /></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(metrics.ticketMedio)}</div>
+                  <p className="text-xs text-muted-foreground">Por negócio ganho</p>
+                </CardContent>
+              </Card>
             </>
           )}
         </div>
 
-        {/* Geographic Map & Conversion Analysis */}
+        {/* Row 3: Segment Cards (Varejo, Projeto, etc) - Separate Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {isLoading ? (
+            Array(2).fill(0).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)
+          ) : (
+            <>
+              <Card className="cursor-pointer hover:scale-[1.02] transition-all border-info/50 bg-info/5" onClick={handleVarejoClick}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Varejo</CardTitle>
+                  <div className="p-2 rounded-lg bg-info/20 text-info"><Store className="h-5 w-5" /></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{varejoTotal}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {deals.por_segmento.varejo.ganhos.length} ganhos • {deals.por_segmento.varejo.andamento.length} andamento • {deals.por_segmento.varejo.perdidos.length} perdidos
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="cursor-pointer hover:scale-[1.02] transition-all border-secondary/50 bg-secondary/5" onClick={handleProjetoClick}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Projeto</CardTitle>
+                  <div className="p-2 rounded-lg bg-secondary/20 text-secondary-foreground"><Briefcase className="h-5 w-5" /></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{projetoTotal}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {deals.por_segmento.projeto.ganhos.length} ganhos • {deals.por_segmento.projeto.andamento.length} andamento • {deals.por_segmento.projeto.perdidos.length} perdidos
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+
+        {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {isLoading ? (
             <>
-              <Skeleton className="h-[500px] rounded-lg" />
-              <Skeleton className="h-[500px] rounded-lg" />
+              <Skeleton className="h-[400px] rounded-lg" />
+              <Skeleton className="h-[400px] rounded-lg" />
             </>
           ) : (
             <>
-              <BrazilHeatMap 
-                stateData={geoData} 
-                onStateClick={handleStateClick}
-              />
+              <SourceChart leads={allLeads} onBarClick={handleSourceChartClick} />
+              <ConversionChart deals={allDeals} onSegmentClick={handleConversionChartClick} />
+            </>
+          )}
+        </div>
+
+        {/* Charts Row 2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-[400px] rounded-lg" />
+              <Skeleton className="h-[400px] rounded-lg" />
+            </>
+          ) : (
+            <>
+              <BrazilHeatMap stateData={geoData} onStateClick={handleStateClick} />
               <ConversionAnalysis
-                googleConvertedLeads={metrics.googleConvertedLeads}
-                otherConvertedLeads={metrics.otherConvertedLeads}
-                googleConvertedVarejo={metrics.googleConvertedVarejo}
-                googleConvertedProjeto={metrics.googleConvertedProjeto}
-                totalConverted={metrics.converted}
+                googleConvertedLeads={marketingData.google}
+                otherConvertedLeads={marketingData.other}
+                googleConvertedVarejo={marketingData.googleVarejo}
+                googleConvertedProjeto={marketingData.googleProjeto}
+                totalConverted={leads.convertidos.length}
                 onSegmentClick={handleConversionAnalysisClick}
               />
             </>
-          )}
-        </div>
-
-        {/* Leads Table */}
-        <div className="bg-card rounded-lg border border-border p-6">
-          {isLoading ? (
-            <Skeleton className="h-[400px]" />
-          ) : (
-            <LeadsTable leads={leads} />
           )}
         </div>
       </div>
@@ -257,6 +375,7 @@ export default function Dashboard() {
         title={modalState.title}
         data={modalState.data}
         type={modalState.type}
+        segmentedData={modalState.segmentedData}
         showDiscardReason={modalState.showDiscardReason}
         showSource={modalState.showSource}
       />

@@ -6,6 +6,7 @@ export interface CRMLead {
   status_id: string; // 'NEW', 'IN_PROCESS', etc.
   date_create: string;
   kinbox_url: string; // From field UF_CRM_1763749259586
+  link_bitrix?: string; // Direct Bitrix CRM link
   discard_reason?: string; // From field UF_CRM_1764102259164
   phone?: string;
   uf?: string; // Estado (UF) para mapa de calor
@@ -20,6 +21,7 @@ export interface CRMDeal {
   category_id: string; // '8' = Varejo, '126' or '134' = Projeto
   date_create: string;
   kinbox_url: string; // From field UF_CRM_690B56170F2F9
+  link_bitrix?: string; // Direct Bitrix CRM link
   lead_id?: string; // Reference to original lead
   source_id?: string; // Origem do negócio
 }
@@ -102,13 +104,13 @@ export const SOURCE_ATTRIBUTION = {
 
 // Helper functions
 export const isMetaAds = (sourceId: string): boolean => {
-  return SOURCE_ATTRIBUTION.META_ADS.some(prefix => 
+  return SOURCE_ATTRIBUTION.META_ADS.some(prefix =>
     sourceId.toUpperCase().includes(prefix) || sourceId === prefix
   );
 };
 
 export const isGoogleAds = (sourceId: string): boolean => {
-  return SOURCE_ATTRIBUTION.GOOGLE_ADS.some(prefix => 
+  return SOURCE_ATTRIBUTION.GOOGLE_ADS.some(prefix =>
     sourceId.toUpperCase().includes(prefix)
   );
 };
@@ -122,14 +124,14 @@ export const getSourceAttribution = (sourceId: string): string => {
 export const getDetailedSource = (sourceId: string): string => {
   // Check exact match first
   if (SOURCE_MAP[sourceId]) return SOURCE_MAP[sourceId];
-  
+
   // Check prefix matches
   for (const [prefix, label] of Object.entries(SOURCE_MAP)) {
     if (sourceId.toUpperCase().includes(prefix)) {
       return label;
     }
   }
-  
+
   return 'Orgânico/Outros';
 };
 

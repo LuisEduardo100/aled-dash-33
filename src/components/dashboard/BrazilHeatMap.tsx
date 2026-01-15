@@ -1,7 +1,8 @@
 import { useEffect, useRef, useMemo } from 'react';
 import * as echarts from 'echarts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CRMLead, STATE_NAMES } from '@/types/crm';
+import { SegmentedLead } from '@/types/dashboard';
+import { STATE_NAMES } from '@/types/crm';
 
 // Brazil GeoJSON (simplified coordinates for each state)
 const brazilGeoJson = {
@@ -38,8 +39,8 @@ const brazilGeoJson = {
 };
 
 interface BrazilHeatMapProps {
-  stateData: Record<string, { total: number; sources: Record<string, number>; leads: CRMLead[] }>;
-  onStateClick?: (uf: string, leads: CRMLead[]) => void;
+  stateData: Record<string, { total: number; sources: Record<string, number>; leads: SegmentedLead[] }>;
+  onStateClick?: (uf: string, leads: SegmentedLead[]) => void;
 }
 
 export function BrazilHeatMap({ stateData, onStateClick }: BrazilHeatMapProps) {
@@ -83,15 +84,15 @@ export function BrazilHeatMap({ stateData, onStateClick }: BrazilHeatMapProps) {
           if (!data || !data.value) {
             return `<strong>${params.name}</strong><br/>Sem leads convertidos`;
           }
-          
+
           let tooltipContent = `<strong>${params.name}</strong><br/>${data.value} Leads Convertidos<br/><br/>`;
-          
+
           if (data.sources) {
             Object.entries(data.sources).forEach(([source, count]) => {
               tooltipContent += `${source}: ${count}<br/>`;
             });
           }
-          
+
           return tooltipContent;
         },
       },
@@ -184,7 +185,7 @@ export function BrazilHeatMap({ stateData, onStateClick }: BrazilHeatMapProps) {
       </CardHeader>
       <CardContent>
         <div ref={chartRef} className="w-full h-[400px]" />
-        
+
         {/* Top states summary */}
         <div className="mt-4 grid grid-cols-3 gap-2">
           {mapData

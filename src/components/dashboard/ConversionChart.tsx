@@ -1,10 +1,10 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CRMDeal, getDealCategory } from '@/types/crm';
+import { SegmentedDeal } from '@/types/dashboard';
 
 interface ConversionChartProps {
-  deals: CRMDeal[];
-  onSegmentClick: (category: string, deals: CRMDeal[]) => void;
+  deals: SegmentedDeal[];
+  onSegmentClick: (category: string, deals: SegmentedDeal[]) => void;
 }
 
 const COLORS = {
@@ -15,19 +15,25 @@ const COLORS = {
 
 export function ConversionChart({ deals, onSegmentClick }: ConversionChartProps) {
   // Filter only won deals for conversion analysis
-  const wonDeals = deals.filter(d => d.stage_id.includes('WON'));
-  
+  const wonDeals = deals.filter(d => d.status_nome === 'Ganho');
+
   // Group by category
   const categoryData = wonDeals.reduce((acc, deal) => {
-    const category = getDealCategory(deal.category_id);
+    // Normalize category name details
+    let category = deal.segmento || 'Outros';
+    // Capitalize first letter if needed or match exact keys
+    if (category.toLowerCase() === 'varejo') category = 'Varejo';
+    else if (category.toLowerCase() === 'projeto') category = 'Projeto';
+    else category = 'Outros';
+
     if (!acc[category]) {
       acc[category] = { count: 0, value: 0, deals: [] };
     }
     acc[category].count++;
-    acc[category].value += deal.opportunity;
+    acc[category].value += (deal.valor || 0);
     acc[category].deals.push(deal);
     return acc;
-  }, {} as Record<string, { count: number; value: number; deals: CRMDeal[] }>);
+  }, {} as Record<string, { count: number; value: number; deals: SegmentedDeal[] }>);
 
   const chartData = Object.entries(categoryData).map(([name, data]) => ({
     name,
@@ -36,7 +42,7 @@ export function ConversionChart({ deals, onSegmentClick }: ConversionChartProps)
     deals: data.deals,
   }));
 
-  const handleClick = (data: { name: string; deals: CRMDeal[] }) => {
+  const handleClick = (data: { name: string; deals: SegmentedDeal[] }) => {
     onSegmentClick(data.name, data.deals);
   };
 
@@ -83,16 +89,16 @@ export function ConversionChart({ deals, onSegmentClick }: ConversionChartProps)
                 style={{ cursor: 'pointer' }}
               >
                 {chartData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
+                  <Cell
+                    key={`cell-${index}`}
                     fill={COLORS[entry.name as keyof typeof COLORS] || COLORS.Outros}
                     stroke="transparent"
                   />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
-              <Legend 
-                verticalAlign="bottom" 
+              <Legend
+                verticalAlign="bottom"
                 height={36}
                 formatter={(value) => (
                   <span className="text-sm text-foreground">{value}</span>
@@ -105,11 +111,11 @@ export function ConversionChart({ deals, onSegmentClick }: ConversionChartProps)
             Nenhum negócio convertido no período
           </div>
         )}
-        
+
         {/* Summary below chart */}
         <div className="mt-4 grid grid-cols-2 gap-4">
           {chartData.map((item) => (
-            <div 
+            <div
               key={item.name}
               className="p-3 rounded-lg bg-secondary/50 cursor-pointer hover:bg-secondary transition-colors"
               onClick={() => handleClick(item)}
