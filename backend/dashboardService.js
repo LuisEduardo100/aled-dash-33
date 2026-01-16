@@ -89,7 +89,22 @@ const getEmptyFallback = () => ({
   },
   performance_by_seller: [],
   charts: { map: [], sources: [], timeline: [] },
+  charts: { map: [], sources: [], timeline: [] },
 });
+
+// Fetch GeoJSON from external source
+const getGeoJson = async () => {
+    try {
+        const response = await fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson');
+        if (!response.ok) {
+            throw new Error(`Failed to fetch GeoJSON: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching GeoJSON:', error);
+        throw error;
+    }
+};
 
 // A. KPIs Gerais de Leads
 const calculateLeadKPIs = (leads) => {
@@ -256,4 +271,4 @@ const formatChartData = (leads, deals) => {
   };
 };
 
-module.exports = { getDashboardData, getRawData };
+module.exports = { getDashboardData, getRawData, getGeoJson };

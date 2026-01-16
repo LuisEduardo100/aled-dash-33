@@ -15,9 +15,7 @@ import {
 
 const menuItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Leads', url: '/leads', icon: Users },
-  { title: 'Negócios', url: '/deals', icon: Briefcase },
-  { title: 'Configurações', url: '/settings', icon: Settings },
+  { title: 'Lista de Leads Avançada', url: '/advanced-leads', icon: Users },
 ];
 
 export function DashboardSidebar() {
@@ -36,7 +34,7 @@ export function DashboardSidebar() {
           )}
         </div>
       </SidebarHeader>
-      
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground">
@@ -47,9 +45,9 @@ export function DashboardSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      end 
+                    <NavLink
+                      to={item.url}
+                      end
                       className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent"
                       activeClassName="bg-accent text-accent-foreground"
                     >

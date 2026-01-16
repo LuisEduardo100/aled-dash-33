@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Calendar, Filter, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, Filter, RefreshCw, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -7,6 +7,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { DateFilter } from '@/types/dashboard';
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { DateRange } from 'react-day-picker';
 
 interface FilterBarProps {
     dateFilter: DateFilter;
@@ -14,8 +15,15 @@ interface FilterBarProps {
     sourceFilter: string;
     onSourceFilterChange: (source: string) => void;
     availableSources: string[];
+    ufFilter: string;
+    onUfFilterChange: (uf: string) => void;
+    availableUfs: string[];
+    regionalFilter?: string;
+    onRegionalFilterChange?: (reg: string) => void;
+    availableRegionals?: string[];
     onRefresh: () => void;
     isLoading?: boolean;
+    isSyncing?: boolean; // New prop
 }
 
 type DatePreset = 'hoje' | 'ultimos7' | 'mesAtual' | 'custom';
@@ -26,11 +34,26 @@ export function FilterBar({
     sourceFilter,
     onSourceFilterChange,
     availableSources,
+    ufFilter,
+    onUfFilterChange,
+    availableUfs,
+    regionalFilter,
+    onRegionalFilterChange,
+    availableRegionals,
     onRefresh,
     isLoading = false,
+    isSyncing = false, // New prop
 }: FilterBarProps) {
     const [activePreset, setActivePreset] = useState<DatePreset>('mesAtual');
     const [showCustomPicker, setShowCustomPicker] = useState(false);
+    const [tempDate, setTempDate] = useState<DateRange | undefined>();
+
+    // Reset temp state when popover opens to ensure fresh selection flow
+    useEffect(() => {
+        if (showCustomPicker) {
+            setTempDate(undefined);
+        }
+    }, [showCustomPicker]);
 
     const handlePresetClick = (preset: DatePreset) => {
         setActivePreset(preset);
@@ -61,7 +84,9 @@ export function FilterBar({
         }
     };
 
-    const handleCustomDateSelect = (range: { from?: Date; to?: Date } | undefined) => {
+    const handleCustomDateSelect = (range: DateRange | undefined) => {
+        setTempDate(range);
+
         if (range?.from && range?.to) {
             onDateFilterChange({
                 startDate: startOfDay(range.from),
@@ -119,12 +144,9 @@ export function FilterBar({
                         <PopoverContent className="w-auto p-0" align="start">
                             <CalendarComponent
                                 mode="range"
-                                selected={{
-                                    from: dateFilter.startDate || undefined,
-                                    to: dateFilter.endDate || undefined,
-                                }}
+                                selected={tempDate}
                                 onSelect={handleCustomDateSelect}
-                                numberOfMonths={2}
+                                numberOfMonths={1}
                                 locale={ptBR}
                             />
                         </PopoverContent>
@@ -152,6 +174,50 @@ export function FilterBar({
                 </Select>
             </div>
 
+            {/* UF Filter */}
+            {ufFilter && onUfFilterChange && availableUfs && (
+                <>
+                    <div className="h-6 w-px bg-border text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <Select value={ufFilter} onValueChange={onUfFilterChange}>
+                            <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="UF/Região" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableUfs.map(uf => (
+                                    <SelectItem key={uf} value={uf}>
+                                        {uf}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </>
+            )}
+
+            {/* Regional Filter */}
+            {onRegionalFilterChange && availableRegionals && (
+                <>
+                    <div className="h-6 w-px bg-border text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <Select value={regionalFilter} onValueChange={onRegionalFilterChange}>
+                            <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Regional" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableRegionals.map(reg => (
+                                    <SelectItem key={reg} value={reg}>
+                                        {reg}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </>
+            )}
+
             {/* Spacer */}
             <div className="flex-1" />
 
@@ -160,20 +226,20 @@ export function FilterBar({
                 variant="outline"
                 size="sm"
                 onClick={onRefresh}
-                disabled={isLoading}
+                disabled={isLoading || isSyncing}
                 className="gap-2"
             >
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                Atualizar
+                <RefreshCw className={`h-4 w-4 ${isLoading || isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Sincronizando...' : 'Atualizar'}
             </Button>
 
             {/* Current Filter Display */}
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground hidden lg:block">
                 {getDateRangeLabel()}
-                {sourceFilter !== 'Todos' && ` • ${sourceFilter}`}
+                {sourceFilter !== 'Todos' && ` • Fonte: ${sourceFilter}`}
+                {ufFilter && ufFilter !== 'Todos' && ` • UF: ${ufFilter}`}
+                {regionalFilter && regionalFilter !== 'Todos' && ` • Regional: ${regionalFilter}`}
             </div>
         </div>
     );
 }
-
-export default FilterBar;

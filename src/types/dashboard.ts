@@ -5,7 +5,9 @@ export interface SegmentedLead {
     id: string;
     nome: string;
     status_codigo: string; // "NEW", "IN_PROCESS", etc - for debug only
-    fonte: string; // For source filtering
+    // For source filtering
+    fonte: string;
+    regional?: string; // New: Regional filter (e.g., "Regional CE")
     motivo_descarte?: string; // Display in Descartados table
     telefone?: string;
     responsavel_nome: string; // Pre-treated, display directly
@@ -24,9 +26,11 @@ export interface SegmentedDeal {
     valor: number; // For revenue/pipeline calculation
     segmento: 'Varejo' | 'Projeto' | 'Outros' | string;
     fonte: string; // For source filtering
+    regional?: string; // New: Regional filter
     uf?: string; // For map
     cidade?: string;
     status_nome: string; // "Ganho", "Perdido", "Em Andamento" - display directly
+    motivo_perda?: string; // New: For Lost Deals analysis
     responsavel_nome: string; // Pre-treated, display directly
     criador_nome: string;
     is_novo: boolean;
@@ -94,13 +98,12 @@ export interface CalculatedMetrics {
 
 // ========== FILTERED DASHBOARD DATA ==========
 export interface FilteredDashboardData {
-    // Filtered lead arrays
+    // ... existing lead/deal arrays ...
     leads: {
         em_atendimento: SegmentedLead[];
         descartados: SegmentedLead[];
         convertidos: SegmentedLead[];
     };
-    // Filtered deal arrays
     deals: {
         por_segmento: {
             varejo: DealsByStatus;
@@ -109,19 +112,49 @@ export interface FilteredDashboardData {
         };
         por_status: DealsByStatus;
     };
-    // Calculated metrics from filtered data
     metrics: CalculatedMetrics;
-    // Available sources for filter dropdown
     availableSources: string[];
-    // Geo Data for Map
-    geoData: Record<string, { total: number; sources: Record<string, number>; leads: SegmentedLead[] }>;
-    // Marketing Data for Conversion Analysis
+    availableUfs: string[];
+    availableRegionals: string[]; // New: Available Regional options
+    geoData: {
+        leads: Record<string, { total: number; sources: Record<string, number>; leads: SegmentedLead[] }>;
+        converted: Record<string, { total: number; sources: Record<string, number>; leads: SegmentedLead[] }>;
+    };
     marketingData: {
         google: SegmentedLead[];
         meta: SegmentedLead[];
+        indicacaoAmigo: SegmentedLead[];
+        profissional: SegmentedLead[];
+        ltv: SegmentedLead[];
         other: SegmentedLead[];
-        googleVarejo: SegmentedLead[];
-        googleProjeto: SegmentedLead[];
+        googleVarejo: SegmentedDeal[];
+        googleProjeto: SegmentedDeal[];
+        metaVarejo: SegmentedDeal[];
+        metaProjeto: SegmentedDeal[];
+    };
+    leadsTimeline: { date: string; count: number }[];
+    convertedBreakdown: {
+        varejo: number;
+        projeto: number;
+        varejoSources: { name: string; value: number }[];
+        projetoSources: { name: string; value: number }[];
+    };
+    discardReasons: { name: string; value: number }[];
+    dealLossReasons: { name: string; value: number }[]; // New: Reasons for lost deals
+    monthlyGoal: MonthlyGoalMetrics; // New: Goal section data
+}
+
+export interface MonthlyGoalMetrics {
+    current: number;
+    target: number;
+    progress: number;
+    projection: number;
+    pace: number;
+    isGoalMet: boolean;
+    workingDays: {
+        elapsed: number;
+        total: number;
+        remaining: number;
     };
 }
 

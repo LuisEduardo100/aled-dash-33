@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { ExternalLink, MessageSquare, ChevronDown } from 'lucide-react';
+import { ExternalLink, MessageSquare, ChevronDown, ArrowUpDown } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { SegmentedLead, SegmentedDeal, DealsByStatus } from '@/types/dashboard';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { HoverScrollContainer } from './HoverScrollContainer';
 
 const ITEMS_PER_PAGE = 50;
 
@@ -54,11 +55,11 @@ const LeadRow = React.memo(({
   showSource: boolean;
   index: number;
 }) => (
-  <TableRow className="hover:bg-muted/30">
+  <TableRow className="hover:bg-muted/30 whitespace-nowrap">
     <TableCell className="w-[50px] text-muted-foreground text-center font-mono text-xs">
       {index + 1}
     </TableCell>
-    <TableCell className="font-medium">{lead.nome}</TableCell>
+    <TableCell className="font-medium max-w-[300px] truncate" title={lead.nome}>{lead.nome}</TableCell>
     <TableCell className="text-muted-foreground">{lead.telefone || '-'}</TableCell>
     <TableCell>{lead.responsavel_nome || '-'}</TableCell>
     {showSource && (
@@ -108,11 +109,11 @@ const DealRow = React.memo(({
   showSource: boolean;
   index: number;
 }) => (
-  <TableRow className="hover:bg-muted/30">
+  <TableRow className="hover:bg-muted/30 whitespace-nowrap">
     <TableCell className="w-[50px] text-muted-foreground text-center font-mono text-xs">
       {index + 1}
     </TableCell>
-    <TableCell className="font-medium">{deal.titulo}</TableCell>
+    <TableCell className="font-medium max-w-[300px] truncate" title={deal.titulo}>{deal.titulo}</TableCell>
     <TableCell className="text-foreground font-medium">{formatCurrency(deal.valor)}</TableCell>
     <TableCell>
       <Badge variant={
@@ -126,7 +127,11 @@ const DealRow = React.memo(({
     {showSource && (
       <TableCell className="text-muted-foreground text-sm">{deal.fonte || '-'}</TableCell>
     )}
+    <TableCell className="text-muted-foreground">{deal.regional || '-'}</TableCell>
     <TableCell className="text-muted-foreground">{deal.uf || '-'}</TableCell>
+    <TableCell className="text-muted-foreground text-sm">
+      {deal.status_nome === 'Perdido' ? (deal.motivo_perda || '-') : '-'}
+    </TableCell>
     <TableCell className="text-muted-foreground">
       {deal.data_fechamento
         ? format(new Date(deal.data_fechamento), 'dd/MM/yyyy', { locale: ptBR })
@@ -175,36 +180,86 @@ const LeadsTable = ({
   displayCount: number;
   onLoadMore: () => void;
 }) => {
-  const visibleLeads = leads.slice(0, displayCount);
-  const hasMore = displayCount < leads.length;
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const sortedLeads = useMemo(() => {
+    let sortableItems = [...leads];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+        switch (sortConfig.key) {
+          case 'nome': aValue = a.nome; bValue = b.nome; break;
+          case 'telefone': aValue = a.telefone; bValue = b.telefone; break;
+          case 'responsavel': aValue = a.responsavel_nome; bValue = b.responsavel_nome; break;
+          case 'fonte': aValue = a.fonte; bValue = b.fonte; break;
+          case 'motivo': aValue = a.motivo_descarte; bValue = b.motivo_descarte; break;
+          case 'data': aValue = a.data_criacao; bValue = b.data_criacao; break;
+          default: return 0;
+        }
+
+        if (aValue === undefined || aValue === null) return 1;
+        if (bValue === undefined || bValue === null) return -1;
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [leads, sortConfig]);
+
+  const visibleLeads = sortedLeads.slice(0, displayCount);
+  const hasMore = displayCount < sortedLeads.length;
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortHead = ({ label, sortKey, className = "" }: { label: string, sortKey: string, className?: string }) => (
+    <TableHead
+      className={`cursor-pointer hover:text-foreground group ${className}`}
+      onClick={() => requestSort(sortKey)}
+    >
+      <div className={`flex items-center gap-1 ${className.includes('text-right') ? 'justify-end' : ''} ${className.includes('text-center') ? 'justify-center' : ''}`}>
+        {label}
+        <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </TableHead>
+  );
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-            <TableHead className="w-[50px] text-center">#</TableHead>
-            <TableHead>Nome</TableHead>
-            <TableHead>Telefone</TableHead>
-            <TableHead>Responsável</TableHead>
-            {showSource && <TableHead>Fonte</TableHead>}
-            {showDiscardReason && <TableHead>Motivo Descarte</TableHead>}
-            <TableHead>Data</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {visibleLeads.map((lead, index) => (
-            <LeadRow
-              key={lead.id}
-              lead={lead}
-              index={index}
-              showDiscardReason={showDiscardReason}
-              showSource={showSource}
-            />
-          ))}
-        </TableBody>
-      </Table>
+      <HoverScrollContainer className="rounded-md border">
+        <Table className="w-full">
+          <TableHeader>
+            <TableRow className="bg-muted/50 whitespace-nowrap">
+              <TableHead className="w-[50px] text-center">#</TableHead>
+              <SortHead label="Nome" sortKey="nome" />
+              <SortHead label="Telefone" sortKey="telefone" />
+              <SortHead label="Responsável" sortKey="responsavel" />
+              {showSource && <SortHead label="Fonte" sortKey="fonte" />}
+              {showDiscardReason && <SortHead label="Motivo Descarte" sortKey="motivo" />}
+              <SortHead label="Data" sortKey="data" />
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visibleLeads.map((lead, index) => (
+              <LeadRow
+                key={lead.id}
+                lead={lead}
+                index={index}
+                showDiscardReason={showDiscardReason}
+                showSource={showSource}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </HoverScrollContainer>
       {hasMore && (
         <div className="flex justify-center py-4">
           <Button variant="outline" onClick={onLoadMore} className="gap-2">
@@ -229,36 +284,91 @@ const DealsTable = ({
   displayCount: number;
   onLoadMore: () => void;
 }) => {
-  const visibleDeals = deals.slice(0, displayCount);
-  const hasMore = displayCount < deals.length;
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const sortedDeals = useMemo(() => {
+    let sortableItems = [...deals];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+        switch (sortConfig.key) {
+          case 'titulo': aValue = a.titulo; bValue = b.titulo; break;
+          case 'valor': aValue = a.valor; bValue = b.valor; break;
+          case 'status': aValue = a.status_nome; bValue = b.status_nome; break;
+          case 'responsavel': aValue = a.responsavel_nome; bValue = b.responsavel_nome; break;
+          case 'fonte': aValue = a.fonte; bValue = b.fonte; break;
+          case 'regional': aValue = a.regional; bValue = b.regional; break;
+          case 'uf': aValue = a.uf; bValue = b.uf; break;
+          case 'motivo': aValue = a.motivo_perda; bValue = b.motivo_perda; break;
+          case 'data': aValue = a.data_fechamento || a.data_criacao; bValue = b.data_fechamento || b.data_criacao; break;
+          default: return 0;
+        }
+
+        if (aValue === undefined || aValue === null) return 1;
+        if (bValue === undefined || bValue === null) return -1;
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [deals, sortConfig]);
+
+  const visibleDeals = sortedDeals.slice(0, displayCount);
+  const hasMore = displayCount < sortedDeals.length;
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortHead = ({ label, sortKey, className = "" }: { label: string, sortKey: string, className?: string }) => (
+    <TableHead
+      className={`cursor-pointer hover:text-foreground group ${className}`}
+      onClick={() => requestSort(sortKey)}
+    >
+      <div className={`flex items-center gap-1 ${className.includes('text-right') ? 'justify-end' : ''} ${className.includes('text-center') ? 'justify-center' : ''}`}>
+        {label}
+        <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </TableHead>
+  );
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-            <TableHead className="w-[50px] text-center">#</TableHead>
-            <TableHead>Título</TableHead>
-            <TableHead>Valor</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Responsável</TableHead>
-            {showSource && <TableHead>Fonte</TableHead>}
-            <TableHead>UF</TableHead>
-            <TableHead>Data</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {visibleDeals.map((deal, index) => (
-            <DealRow
-              key={deal.id}
-              deal={deal}
-              index={index}
-              showSource={showSource}
-            />
-          ))}
-        </TableBody>
-      </Table>
+      <HoverScrollContainer className="rounded-md border">
+        <Table className="w-full">
+          <TableHeader>
+            <TableRow className="bg-muted/50 whitespace-nowrap">
+              <TableHead className="w-[50px] text-center">#</TableHead>
+              <SortHead label="Título" sortKey="titulo" />
+              <SortHead label="Valor" sortKey="valor" />
+              <SortHead label="Status" sortKey="status" />
+              <SortHead label="Responsável" sortKey="responsavel" />
+              {showSource && <SortHead label="Fonte" sortKey="fonte" />}
+              <SortHead label="Regional" sortKey="regional" />
+              <SortHead label="UF" sortKey="uf" />
+              <SortHead label="Motivo Perda" sortKey="motivo" />
+              <SortHead label="Data" sortKey="data" />
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visibleDeals.map((deal, index) => (
+              <DealRow
+                key={deal.id}
+                deal={deal}
+                index={index}
+                showSource={showSource}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </HoverScrollContainer>
       {hasMore && (
         <div className="flex justify-center py-4">
           <Button variant="outline" onClick={onLoadMore} className="gap-2">
@@ -319,6 +429,9 @@ export function DrillDownModal({
             <span>{title}</span>
             <Badge variant="secondary">{totalCount} registros</Badge>
           </DialogTitle>
+          <div className="hidden" id="dialog-description">
+            Detalhes da lista selecionada, incluindo informações de leads e negócios.
+          </div>
         </DialogHeader>
 
         <ScrollArea className="h-[65vh]">

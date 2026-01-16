@@ -8,6 +8,10 @@ import { ConversionChart } from '@/components/dashboard/ConversionChart';
 import { SourceChart } from '@/components/dashboard/SourceChart';
 import { BrazilHeatMap } from '@/components/dashboard/BrazilHeatMap';
 import { ConversionAnalysis } from '@/components/dashboard/ConversionAnalysis';
+import { LeadTimelineChart } from '@/components/dashboard/LeadTimelineChart';
+import { ConvertedSegmentationChart } from '@/components/dashboard/ConvertedSegmentationChart';
+import { DiscardReasonChart } from '@/components/dashboard/DiscardReasonChart';
+import { MonthlyGoalSection } from '@/components/dashboard/MonthlyGoalSection';
 import { useFilteredDashboard } from '@/hooks/useFilteredDashboard';
 import { SegmentedLead, SegmentedDeal, DealsByStatus, DateFilter } from '@/types/dashboard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,6 +52,8 @@ export default function Dashboard() {
     endDate: endOfMonth(new Date())
   });
   const [sourceFilter, setSourceFilter] = useState('Todos');
+  const [ufFilter, setUfFilter] = useState('Todos');
+  const [regionalFilter, setRegionalFilter] = useState('Todos');
 
   // Modal state
   const [modalState, setModalState] = useState<ModalState>({
@@ -64,12 +70,25 @@ export default function Dashboard() {
     deals,
     metrics,
     availableSources,
+    availableUfs,
+    availableRegionals, // NEW
     geoData,
     marketingData,
+    leadsTimeline,
+    convertedBreakdown,
+    discardReasons,
+    dealLossReasons, // NEW
+    monthlyGoal, // NEW
     isLoading,
+    isSyncing, // New
     error,
     refetch
-  } = useFilteredDashboard(dateFilter, sourceFilter === 'Todos' ? null : sourceFilter);
+  } = useFilteredDashboard(
+    dateFilter,
+    sourceFilter === 'Todos' ? null : sourceFilter,
+    ufFilter === 'Todos' ? null : ufFilter,
+    regionalFilter === 'Todos' ? null : regionalFilter // NEW
+  );
 
   // Dark mode
   useEffect(() => {
@@ -81,7 +100,7 @@ export default function Dashboard() {
     setModalState(prev => ({ ...prev, isOpen: false }));
   };
 
-  // Generic List Openers
+  // ... (existing generic list openers) ...
   const openLeadList = (title: string, data: SegmentedLead[], showDiscardReason = false) => {
     setModalState({
       isOpen: true,
@@ -103,7 +122,7 @@ export default function Dashboard() {
     });
   };
 
-  // Specific Handlers
+  // ... (existing specific handlers) ...
   const handleEmAtendimentoClick = () => openLeadList('Leads em Atendimento', leads.em_atendimento);
   const handleDescartadosClick = () => openLeadList('Leads Descartados', leads.descartados, true);
   const handleConvertidosClick = () => openLeadList('Leads Convertidos', leads.convertidos);
@@ -149,8 +168,32 @@ export default function Dashboard() {
     openLeadList(`Estado: ${uf}`, leads);
   };
 
-  const handleConversionAnalysisClick = (title: string, leads: SegmentedLead[]) => {
-    openLeadList(title, leads);
+  const handleConversionAnalysisClick = (title: string, items: SegmentedLead[] | SegmentedDeal[]) => {
+    const isDeal = items.length > 0 && 'segmento' in items[0];
+    if (isDeal) {
+      openDealList(title, items as SegmentedDeal[]);
+    } else {
+      openLeadList(title, items as SegmentedLead[]);
+    }
+  };
+
+  const handleReasonClick = (reason: string, type: 'lead' | 'deal') => {
+    if (type === 'lead') {
+      const subset = leads.descartados.filter(l => (l.motivo_descarte || 'Não informado') === reason);
+      openLeadList(`Descarte: ${reason}`, subset, true);
+    } else {
+      const subset = deals.por_status.perdidos.filter(d => (d.motivo_perda || 'Não informado') === reason);
+      openDealList(`Perda: ${reason}`, subset);
+    }
+  };
+
+  const handleConvertedSegmentClick = (segment: string) => {
+    const segLower = segment.toLowerCase();
+    if (segLower === 'varejo') {
+      handleVarejoClick();
+    } else if (segLower === 'projeto') {
+      handleProjetoClick();
+    }
   };
 
   // Combined data for generic charts
@@ -171,7 +214,7 @@ export default function Dashboard() {
     );
   }
 
-  // Calculate segment totals to avoid mismatch with modal
+  // Calculate segment totals
   const varejoTotal = deals.por_segmento.varejo.ganhos.length +
     deals.por_segmento.varejo.andamento.length +
     deals.por_segmento.varejo.perdidos.length;
@@ -190,12 +233,22 @@ export default function Dashboard() {
           sourceFilter={sourceFilter}
           onSourceFilterChange={setSourceFilter}
           availableSources={availableSources}
+          ufFilter={ufFilter}
+          onUfFilterChange={setUfFilter}
+          availableUfs={availableUfs}
+          regionalFilter={regionalFilter} // NEW
+          onRegionalFilterChange={setRegionalFilter} // NEW
+          availableRegionals={availableRegionals} // NEW
           onRefresh={refetch}
           isLoading={isLoading}
+          isSyncing={isSyncing} // New
         />
       </div>
 
       <div className="flex-1 overflow-auto p-6 space-y-6">
+        {/* Monthly Goal Section */}
+        <MonthlyGoalSection metrics={monthlyGoal} isSyncing={isSyncing} />
+
         {/* Row 1: Lead KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {isLoading ? (
@@ -238,13 +291,12 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Row 2: Financial KPI Cards (Faturamento, Pipeline, Perdidos, Ticket Médio) */}
+        {/* Row 2: Financial KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {isLoading ? (
             Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)
           ) : (
             <>
-              {/* Faturamento */}
               <Card className="cursor-pointer hover:scale-[1.02] transition-all border-primary/50 bg-primary/5" onClick={handleFaturamentoClick}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento</CardTitle>
@@ -256,7 +308,6 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Pipeline */}
               <Card className="cursor-pointer hover:scale-[1.02] transition-all border-warning/50 bg-warning/5" onClick={handlePipelineClick}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Pipeline</CardTitle>
@@ -268,7 +319,6 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Perdidos */}
               <Card className="cursor-pointer hover:scale-[1.02] transition-all border-destructive/50 bg-destructive/5" onClick={handlePerdidosDealClick}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Perdidos</CardTitle>
@@ -280,7 +330,6 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Ticket Médio */}
               <Card className="hover:scale-[1.02] transition-all border-secondary/50 bg-secondary/5">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Ticket Médio</CardTitle>
@@ -295,7 +344,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Row 3: Segment Cards (Varejo, Projeto, etc) - Separate Row */}
+        {/* Row 3: Segment Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {isLoading ? (
             Array(2).fill(0).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)
@@ -339,6 +388,9 @@ export default function Dashboard() {
             </>
           ) : (
             <>
+              <div className="md:col-span-2">
+                <LeadTimelineChart data={leadsTimeline} />
+              </div>
               <SourceChart leads={allLeads} onBarClick={handleSourceChartClick} />
               <ConversionChart deals={allDeals} onSegmentClick={handleConversionChartClick} />
             </>
@@ -354,15 +406,43 @@ export default function Dashboard() {
             </>
           ) : (
             <>
-              <BrazilHeatMap stateData={geoData} onStateClick={handleStateClick} />
-              <ConversionAnalysis
-                googleConvertedLeads={marketingData.google}
-                otherConvertedLeads={marketingData.other}
-                googleConvertedVarejo={marketingData.googleVarejo}
-                googleConvertedProjeto={marketingData.googleProjeto}
-                totalConverted={leads.convertidos.length}
-                onSegmentClick={handleConversionAnalysisClick}
-              />
+              <>
+                <div className="col-span-1 lg:col-span-2 space-y-6">
+                  <BrazilHeatMap stateData={geoData} onStateClick={handleStateClick} />
+                </div>
+
+                {/* Analysis Row: Conversion Analysis */}
+                <div className="col-span-1 lg:col-span-2">
+                  <ConversionAnalysis
+                    googleConvertedLeads={marketingData.google}
+                    metaConvertedLeads={marketingData.meta}
+                    indicacaoConvertedLeads={marketingData.indicacaoAmigo}
+                    profissionalConvertedLeads={marketingData.profissional}
+                    ltvConvertedLeads={marketingData.ltv}
+                    otherConvertedLeads={marketingData.other}
+                    googleConvertedVarejo={marketingData.googleVarejo}
+                    googleConvertedProjeto={marketingData.googleProjeto}
+                    metaConvertedVarejo={marketingData.metaVarejo}
+                    metaConvertedProjeto={marketingData.metaProjeto}
+                    totalConverted={leads.convertidos.length}
+                    onSegmentClick={handleConversionAnalysisClick}
+                  />
+                </div>
+
+                {/* Detail Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 col-span-1 lg:col-span-2 h-[400px]">
+                  <div className="h-full">
+                    <ConvertedSegmentationChart data={convertedBreakdown} onSegmentClick={handleConvertedSegmentClick} />
+                  </div>
+                  <div className="h-full">
+                    <DiscardReasonChart
+                      data={discardReasons}
+                      lossData={dealLossReasons} // NEW
+                      onReasonClick={handleReasonClick} // UPDATED
+                    />
+                  </div>
+                </div>
+              </>
             </>
           )}
         </div>
@@ -379,6 +459,6 @@ export default function Dashboard() {
         showDiscardReason={modalState.showDiscardReason}
         showSource={modalState.showSource}
       />
-    </DashboardLayout>
+    </DashboardLayout >
   );
 }

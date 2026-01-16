@@ -48,153 +48,191 @@ const filterBySource = <T extends { fonte: string }>(items: T[], source: string 
 };
 
 /**
- * Filter leads by date using the correct field
+ * Filter leads by UF
  */
-const filterLeadsByDate = (
-    leads: SegmentedLead[],
-    dateFilter: DateFilter,
-    useReferenceDate: boolean // true for descartados/convertidos, false for em_atendimento
-): SegmentedLead[] => {
-    if (!dateFilter.startDate || !dateFilter.endDate) return leads;
-    return leads.filter(lead => {
-        const dateField = useReferenceDate ? lead.data_referencia : lead.data_criacao;
-        return isDateInRange(dateField, dateFilter);
+// ... utility functions ...
+
+const filterByUf = <T extends { uf?: string }>(items: T[], uf: string | null): T[] => {
+    if (!uf || uf === 'Todos') return items;
+    return items.filter(item => (item.uf || 'N/A') === uf);
+};
+
+const filterByRegional = <T extends { regional?: string }>(items: T[], regional: string | null): T[] => {
+    if (!regional || regional === 'Todos') return items;
+    return items.filter(item => (item.regional || 'N/A') === regional);
+};
+
+const filterLeadsByDate = (leads: SegmentedLead[] | undefined, filter: DateFilter, strict: boolean): SegmentedLead[] => {
+    if (!leads) return [];
+    if (!filter.startDate || !filter.endDate) return leads;
+    return leads.filter(item => isDateInRange(item.data_criacao, filter));
+};
+
+const filterDealsByDate = (deals: SegmentedDeal[] | undefined, filter: DateFilter, strict: boolean): SegmentedDeal[] => {
+    if (!deals) return [];
+    if (!filter.startDate || !filter.endDate) return deals;
+
+    return deals.filter(item => {
+        // Use closing date for closed deals if available
+        if (item.data_fechamento && (item.status_nome === 'Ganho' || item.status_nome === 'Perdido')) {
+            return isDateInRange(item.data_fechamento, filter);
+        }
+        // Fallback to creation date
+        return isDateInRange(item.data_criacao, filter);
     });
 };
 
-/**
- * Filter deals by date using the correct field
- */
-const filterDealsByDate = (
-    deals: SegmentedDeal[],
-    dateFilter: DateFilter,
-    useFechamentoDate: boolean // true for ganhos/perdidos, false for andamento
-): SegmentedDeal[] => {
-    if (!dateFilter.startDate || !dateFilter.endDate) return deals;
-    return deals.filter(deal => {
-        const dateField = useFechamentoDate ? deal.data_fechamento : deal.data_criacao;
-        return isDateInRange(dateField, dateFilter);
-    });
+const calculateMetrics = (leads: { em_atendimento: SegmentedLead[], descartados: SegmentedLead[], convertidos: SegmentedLead[] }, deals: DealsByStatus): CalculatedMetrics => {
+    const totalLeads = leads.em_atendimento.length + leads.descartados.length + leads.convertidos.length;
+
+    const faturamentoTotal = deals.ganhos.reduce((acc, d) => acc + (d.valor || 0), 0);
+    const pipelineTotal = deals.andamento.reduce((acc, d) => acc + (d.valor || 0), 0);
+    const perdidosTotal = deals.perdidos.reduce((acc, d) => acc + (d.valor || 0), 0);
+
+    const ticketMedio = deals.ganhos.length > 0 ? faturamentoTotal / deals.ganhos.length : 0;
+
+    // Calculate source counts
+    const allLeads = [...leads.em_atendimento, ...leads.descartados, ...leads.convertidos];
+    const google = allLeads.filter(l => l.fonte && l.fonte.toLowerCase().includes('google')).length;
+    const meta = allLeads.filter(l => l.fonte && (l.fonte.toLowerCase().includes('facebook') || l.fonte.toLowerCase().includes('instagram'))).length;
+    const other = totalLeads - google - meta;
+
+    return {
+        totalLeads,
+        emAtendimentoCount: leads.em_atendimento.length,
+        descartadosCount: leads.descartados.length,
+        convertidosCount: leads.convertidos.length,
+        faturamentoTotal,
+        pipelineTotal,
+        perdidosTotal,
+        ticketMedio,
+        totalDealsGanhos: deals.ganhos.length,
+        totalDealsPerdidos: deals.perdidos.length,
+        totalDealsAndamento: deals.andamento.length,
+        leadsGoogle: google,
+        leadsMeta: meta,
+        leadsOther: other
+    };
 };
 
-/**
- * Filter DealsByStatus object (with defensive null checks)
- */
+// ... date filters ...
+
 const filterDealsByStatus = (
     deals: DealsByStatus | undefined,
     dateFilter: DateFilter,
-    sourceFilter: string | null
+    sourceFilter: string | null,
+    ufFilter: string | null,
+    regionalFilter: string | null // NEW
 ): DealsByStatus => {
     const emptyResult = { ganhos: [], perdidos: [], andamento: [] };
     if (!deals) return emptyResult;
 
     return {
-        ganhos: filterBySource(
+        ganhos: filterByRegional(filterByUf(filterBySource(
             filterDealsByDate(deals.ganhos || [], dateFilter, true),
             sourceFilter
-        ),
-        perdidos: filterBySource(
+        ), ufFilter), regionalFilter),
+        perdidos: filterByRegional(filterByUf(filterBySource(
             filterDealsByDate(deals.perdidos || [], dateFilter, true),
             sourceFilter
-        ),
-        andamento: filterBySource(
+        ), ufFilter), regionalFilter),
+        andamento: filterByRegional(filterByUf(filterBySource(
             filterDealsByDate(deals.andamento || [], dateFilter, false),
             sourceFilter
-        ),
+        ), ufFilter), regionalFilter),
     };
 };
 
-/**
- * Extract all unique sources from the payload (with defensive null checks)
- */
-const extractUniqueSources = (payload: SegmentedPayload): string[] => {
-    const sources = new Set<string>();
+// Start of Monthly Goal Logic
+import { getDaysInMonth, isSunday, isSaturday, startOfMonth, endOfMonth, eachDayOfInterval, differenceInBusinessDays, isAfter, isSameMonth } from 'date-fns';
 
-    // From leads (with null checks)
-    const allLeads = [
-        ...(payload.leads?.em_atendimento || []),
-        ...(payload.leads?.descartados || []),
-        ...(payload.leads?.convertidos || [])
+const calculateGoalMetrics = (payload: SegmentedPayload) => {
+    const META_TOTAL = 200;
+    const now = new Date();
+
+    // 1. Filter TARGET DEALS (Scope: Current Month)
+    // We utilize DEALS because Leads (pre-conversion) do not consistently have segment info.
+    // We look at 'Projeto' segment deals.
+    const projectDeals = payload.deals?.por_segmento?.projeto;
+
+    if (!projectDeals) {
+        return {
+            current: 0,
+            target: META_TOTAL,
+            progress: 0,
+            projection: 0,
+            pace: 0,
+            isGoalMet: false,
+            workingDays: { elapsed: 0, total: 1, remaining: 1 }
+        };
+    }
+
+    const allProjectDeals = [
+        ...(projectDeals.ganhos || []),
+        ...(projectDeals.perdidos || []),
+        ...(projectDeals.andamento || [])
     ];
-    allLeads.forEach(lead => {
-        if (lead?.fonte) sources.add(lead.fonte);
+
+    // Filter by Source (Google/Meta) AND Date (Current Month Creation)
+    const validSources = ['google ads', 'meta ads', 'facebook ads', 'instagram ads', 'google', 'instagram', 'facebook'];
+
+    const relevantDeals = deduplicateById(allProjectDeals).filter(d => {
+        // Source Check
+        const source = (d.fonte || '').toLowerCase();
+        const isSourceValid = validSources.some(s => source.includes(s));
+
+        // Date Check (Safety: Ensure it is actually from this month if payload has more)
+        const created = new Date(d.data_criacao);
+        const isCurrentMonth = isSameMonth(created, now);
+
+        return isSourceValid && isCurrentMonth;
     });
 
-    // From deals (with null checks)
-    const allDeals = [
-        ...(payload.deals?.por_status?.ganhos || []),
-        ...(payload.deals?.por_status?.perdidos || []),
-        ...(payload.deals?.por_status?.andamento || []),
-    ];
-    allDeals.forEach(deal => {
-        if (deal?.fonte) sources.add(deal.fonte);
-    });
+    const currentCount = relevantDeals.length;
 
-    return ['Todos', ...Array.from(sources).sort()];
-};
+    // 2. Calculate Working Days (Mon-Fri)
+    const start = startOfMonth(now);
+    const end = endOfMonth(now);
+    const daysInMonth = eachDayOfInterval({ start, end });
 
-/**
- * Calculate metrics from filtered arrays (with defensive null checks)
- */
-const calculateMetrics = (
-    leads: SegmentedPayload['leads'],
-    dealsByStatus: DealsByStatus
-): CalculatedMetrics => {
-    const emAtendimento = leads?.em_atendimento || [];
-    const descartados = leads?.descartados || [];
-    const convertidos = leads?.convertidos || [];
-    const ganhos = dealsByStatus?.ganhos || [];
-    const perdidos = dealsByStatus?.perdidos || [];
-    const andamento = dealsByStatus?.andamento || [];
+    const isWorkingDay = (d: Date) => !isSunday(d) && !isSaturday(d);
 
-    const allLeads = [...emAtendimento, ...descartados, ...convertidos];
+    // Count total working days in month (excluding Sat/Sun)
+    const totalWorkingDays = daysInMonth.filter(isWorkingDay).length;
 
-    // Calculate faturamento (sum of ganhos)
-    const faturamentoTotal = ganhos.reduce((sum, d) => sum + (d.valor || 0), 0);
-    const pipelineTotal = andamento.reduce((sum, d) => sum + (d.valor || 0), 0);
-    const perdidosTotal = perdidos.reduce((sum, d) => sum + (d.valor || 0), 0);
+    // Count elapsed working days (up to today)
+    const elapsedWorkingDays = daysInMonth.filter(d => isWorkingDay(d) && !isAfter(d, now)).length;
 
-    // Ticket médio
-    const ticketMedio = ganhos.length > 0
-        ? faturamentoTotal / ganhos.length
+    // Count remaining working days
+    const remainingWorkingDays = totalWorkingDays - elapsedWorkingDays;
+
+    // 3. Formulas
+    const progress = Math.min(100, (currentCount / META_TOTAL) * 100);
+
+    // Run Rate (Projection): (Current / Elapsed) * Total
+    const projection = elapsedWorkingDays > 0
+        ? Math.round((currentCount / elapsedWorkingDays) * totalWorkingDays)
         : 0;
 
-    // Source attribution
-    const leadsGoogle = allLeads.filter(l =>
-        l.fonte?.toLowerCase().includes('google')
-    ).length;
-    const leadsMeta = allLeads.filter(l =>
-        l.fonte?.toLowerCase().includes('instagram') ||
-        l.fonte?.toLowerCase().includes('facebook') ||
-        l.fonte?.toLowerCase().includes('meta')
-    ).length;
-    const leadsOther = allLeads.length - leadsGoogle - leadsMeta;
+    // Daily Pace (Required): (Target - Current) / Remaining
+    const leadsNeeded = Math.max(0, META_TOTAL - currentCount);
+    const pace = remainingWorkingDays > 0
+        ? Math.ceil(leadsNeeded / remainingWorkingDays)
+        : leadsNeeded;
 
     return {
-        totalLeads: allLeads.length,
-        emAtendimentoCount: emAtendimento.length,
-        descartadosCount: descartados.length,
-        convertidosCount: convertidos.length,
-        faturamentoTotal,
-        pipelineTotal,
-        perdidosTotal,
-        ticketMedio,
-        totalDealsGanhos: ganhos.length,
-        totalDealsPerdidos: perdidos.length,
-        totalDealsAndamento: andamento.length,
-        leadsGoogle,
-        leadsMeta,
-        leadsOther,
+        current: currentCount,
+        target: META_TOTAL,
+        progress,
+        projection,
+        pace,
+        isGoalMet: currentCount >= META_TOTAL,
+        workingDays: { elapsed: elapsedWorkingDays, total: totalWorkingDays, remaining: remainingWorkingDays }
     };
 };
 
-// ========== EMPTY STATE ==========
 const getEmptyPayload = (): SegmentedPayload => ({
-    leads: {
-        em_atendimento: [],
-        descartados: [],
-        convertidos: [],
-    },
+    leads: { em_atendimento: [], descartados: [], convertidos: [] },
     deals: {
         por_segmento: {
             varejo: { ganhos: [], perdidos: [], andamento: [] },
@@ -205,13 +243,65 @@ const getEmptyPayload = (): SegmentedPayload => ({
     },
 });
 
+const extractUniqueSources = (payload: SegmentedPayload): string[] => {
+    const sources = new Set<string>();
+    const gather = (list: any[]) => list?.forEach(i => { if (i.fonte) sources.add(i.fonte); });
+
+    gather(payload.leads?.em_atendimento);
+    gather(payload.leads?.descartados);
+    gather(payload.leads?.convertidos);
+
+    gather(payload.deals?.por_status?.ganhos);
+    gather(payload.deals?.por_status?.perdidos);
+    gather(payload.deals?.por_status?.andamento);
+
+    return ['Todos', ...Array.from(sources).sort()];
+};
+
+const extractUniqueUfs = (payload: SegmentedPayload): string[] => {
+    const ufs = new Set<string>();
+    const gather = (list: any[]) => list?.forEach(i => { if (i.uf) ufs.add(i.uf); });
+
+    gather(payload.leads?.em_atendimento);
+    gather(payload.leads?.descartados);
+    gather(payload.leads?.convertidos);
+
+    gather(payload.deals?.por_status?.ganhos);
+    gather(payload.deals?.por_status?.perdidos);
+    gather(payload.deals?.por_status?.andamento);
+
+    return ['Todos', ...Array.from(ufs).sort()];
+};
+
+const extractUniqueRegionals = (payload: SegmentedPayload): string[] => {
+    const regionals = new Set<string>();
+    const gather = (list: any[]) => list?.forEach(i => { if (i.regional) regionals.add(i.regional); });
+
+    gather(payload.leads?.em_atendimento);
+    gather(payload.leads?.descartados);
+    gather(payload.leads?.convertidos);
+
+    gather(payload.deals?.por_status?.ganhos);
+    gather(payload.deals?.por_status?.perdidos);
+    gather(payload.deals?.por_status?.andamento);
+
+    return ['Todos', ...Array.from(regionals).sort()];
+}
+
+// ... calculateMetrics ...
+
 // ========== MAIN HOOK ==========
 export const useFilteredDashboard = (
     dateFilter: DateFilter,
-    sourceFilter: string | null = null
+    sourceFilter: string | null = null,
+    ufFilter: string | null = null,
+    regionalFilter: string | null = null // NEW
 ) => {
+    // ... fetchData logic (same) ...
+
     const [rawPayload, setRawPayload] = useState<SegmentedPayload>(getEmptyPayload());
     const [isLoading, setIsLoading] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false); // New state for sync
     const [error, setError] = useState<string | null>(null);
 
     // Fetch data from backend
@@ -228,15 +318,19 @@ export const useFilteredDashboard = (
             }
 
             const data = await response.json();
+            // ... (rest of processing logic is encapsulated in next steps or already present)
 
             // Extract payload from response and safely initialize structure
-            const emptyDeals = { ganhos: [], perdidos: [], andamento: [] };
+            const emptyDealStatus = { ganhos: [], perdidos: [], andamento: [] };
 
             // Start with empty structure
             const payload: SegmentedPayload = getEmptyPayload();
 
             // Safely merge incoming data
             const incomingPayload = data.payload || data;
+
+            // ... (keeping existing logic for leads/deals extraction same as viewed) ...
+            // Re-pasting the extraction logic to ensure continuity
 
             // Leads - handle both old flat array format and new segmented format
             if (incomingPayload.leads) {
@@ -312,6 +406,42 @@ export const useFilteredDashboard = (
         }
     }, []);
 
+    // Trigger Sync via Backend Proxy
+    const syncData = useCallback(async () => {
+        setIsSyncing(true);
+        // Don't clear current data/error, just show syncing state
+        try {
+            // Using a relative path which will be proxied or hit the same domain server
+            // Adjust base URL if API_CONFIG.BASE_URL is different from where /api/sync lives
+            // Assuming API_CONFIG.DASHBOARD_ENDPOINT is like 'http://localhost:3000/api/dashboard'
+            // We want 'http://localhost:3000/api/sync'
+            // Let's construct it safely or hardcode relative '/api/sync' if on same origin
+
+            const baseUrl = API_CONFIG.DASHBOARD_ENDPOINT.replace('/dashboard', '');
+            const url = `${baseUrl}/sync`;
+
+            const response = await fetch(url, { method: 'POST' });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.details || `Sync failed: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('Sync success:', result);
+
+            // After sync success, refetch data
+            await fetchData();
+
+        } catch (err) {
+            console.error('Sync error:', err);
+            // Optionally set a toast or temporary error, but maybe not block the dashboard
+            alert('Erro ao sincronizar dados: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
+        } finally {
+            setIsSyncing(false);
+        }
+    }, [fetchData]);
+
     useEffect(() => {
         fetchData();
     }, [fetchData]);
@@ -320,25 +450,27 @@ export const useFilteredDashboard = (
     const filteredData: FilteredDashboardData = useMemo(() => {
         // Filter leads
         const filteredLeads = {
-            em_atendimento: filterBySource(
+            em_atendimento: filterByRegional(filterByUf(filterBySource(
                 filterLeadsByDate(rawPayload.leads.em_atendimento, dateFilter, false),
                 sourceFilter
-            ),
-            descartados: filterBySource(
+            ), ufFilter), regionalFilter),
+            descartados: filterByRegional(filterByUf(filterBySource(
                 filterLeadsByDate(rawPayload.leads.descartados, dateFilter, true),
                 sourceFilter
-            ),
-            convertidos: filterBySource(
+            ), ufFilter), regionalFilter),
+            convertidos: filterByRegional(filterByUf(filterBySource(
                 filterLeadsByDate(rawPayload.leads.convertidos, dateFilter, true),
                 sourceFilter
-            ),
+            ), ufFilter), regionalFilter),
         };
 
         // Filter deals by status
         const filteredDealsByStatus = filterDealsByStatus(
             rawPayload.deals.por_status,
             dateFilter,
-            sourceFilter
+            sourceFilter,
+            ufFilter,
+            regionalFilter
         );
 
         // Filter deals by segment
@@ -346,68 +478,185 @@ export const useFilteredDashboard = (
             varejo: filterDealsByStatus(
                 rawPayload.deals.por_segmento?.varejo || { ganhos: [], perdidos: [], andamento: [] },
                 dateFilter,
-                sourceFilter
+                sourceFilter,
+                ufFilter,
+                regionalFilter
             ),
             projeto: filterDealsByStatus(
                 rawPayload.deals.por_segmento?.projeto || { ganhos: [], perdidos: [], andamento: [] },
                 dateFilter,
-                sourceFilter
+                sourceFilter,
+                ufFilter,
+                regionalFilter
             ),
             outros: filterDealsByStatus(
                 rawPayload.deals.por_segmento?.outros || { ganhos: [], perdidos: [], andamento: [] },
                 dateFilter,
-                sourceFilter
+                sourceFilter,
+                ufFilter,
+                regionalFilter
             ),
         };
 
         // Calculate metrics from filtered data
         const metrics = calculateMetrics(filteredLeads, filteredDealsByStatus);
 
+        // ... geoData calc (same) ...
         // Calculate Geo Data for Map
-        const geoData: Record<string, { total: number; sources: Record<string, number>; leads: SegmentedLead[] }> = {};
+        const geoData = {
+            leads: {} as Record<string, { total: number; sources: Record<string, number>; leads: SegmentedLead[] }>,
+            converted: {} as Record<string, { total: number; sources: Record<string, number>; leads: SegmentedLead[] }>
+        };
+
         const allConvertedLeads = filteredLeads.convertidos;
+        const allLeads = [
+            ...filteredLeads.em_atendimento,
+            ...filteredLeads.descartados,
+            ...filteredLeads.convertidos
+        ];
 
-        allConvertedLeads.forEach(lead => {
-            const uf = lead.uf || 'N/A';
-            if (!geoData[uf]) {
-                geoData[uf] = { total: 0, sources: {}, leads: [] };
-            }
-            geoData[uf].total++;
-            geoData[uf].leads.push(lead); // Now pushing SegmentedLead
+        // Helper to populate geoData
+        const populateGeoData = (list: SegmentedLead[], target: Record<string, { total: number; sources: Record<string, number>; leads: SegmentedLead[] }>) => {
+            list.forEach(lead => {
+                const uf = lead.uf || 'N/A';
+                if (!target[uf]) {
+                    target[uf] = { total: 0, sources: {}, leads: [] };
+                }
+                target[uf].total++;
+                target[uf].leads.push(lead);
 
-            const source = lead.fonte || 'Desconhecido';
-            geoData[uf].sources[source] = (geoData[uf].sources[source] || 0) + 1;
+                const source = lead.fonte || 'Desconhecido';
+                target[uf].sources[source] = (target[uf].sources[source] || 0) + 1;
+            });
+        };
+
+        populateGeoData(allLeads, geoData.leads);
+        populateGeoData(allConvertedLeads, geoData.converted);
+
+        // Calculate Marketing Data (same) ...
+        // Calculate Marketing Data for Conversion Analysis (Expanded)
+        const normalizeSource = (s: string | undefined) => (s || '').toLowerCase();
+
+        const googleLeads = allConvertedLeads.filter(l => normalizeSource(l.fonte).includes('google'));
+        const metaLeads = allConvertedLeads.filter(l =>
+            normalizeSource(l.fonte).includes('meta') ||
+            normalizeSource(l.fonte).includes('facebook') ||
+            normalizeSource(l.fonte).includes('instagram')
+        );
+        const indicacaoAmigoLeads = allConvertedLeads.filter(l => normalizeSource(l.fonte).includes('indicação amigo'));
+        const profissionalLeads = allConvertedLeads.filter(l => normalizeSource(l.fonte).includes('profissional'));
+        const ltvLeads = allConvertedLeads.filter(l => normalizeSource(l.fonte).includes('ltv'));
+
+        // "Other" now excludes the specific ones above
+        const otherLeads = allConvertedLeads.filter(l => {
+            const s = normalizeSource(l.fonte);
+            return !s.includes('google') &&
+                !s.includes('meta') &&
+                !s.includes('facebook') &&
+                !s.includes('instagram') &&
+                !s.includes('indicação amigo') &&
+                !s.includes('profissional') &&
+                !s.includes('ltv');
         });
 
-        // Calculate Marketing Data for Conversion Analysis
-        const googleLeads = allConvertedLeads.filter(l => l.fonte?.toLowerCase().includes('google'));
-        const metaLeads = allConvertedLeads.filter(l =>
-            l.fonte?.toLowerCase().includes('instagram') ||
-            l.fonte?.toLowerCase().includes('facebook') ||
-            l.fonte?.toLowerCase().includes('meta')
-        );
-        const otherLeads = allConvertedLeads.filter(l =>
-            !l.fonte?.toLowerCase().includes('google') &&
-            !l.fonte?.toLowerCase().includes('instagram') &&
-            !l.fonte?.toLowerCase().includes('facebook') &&
-            !l.fonte?.toLowerCase().includes('meta')
-        );
+        const googleVarejo = [
+            ...filteredDealsBySegmento.varejo.ganhos,
+            ...filteredDealsBySegmento.varejo.perdidos,
+            ...filteredDealsBySegmento.varejo.andamento
+        ].filter(d => normalizeSource(d.fonte).includes('google'));
 
-        // Google breakdown by resulting deal segment (approximate matching)
-        // Since leads don't have segment directly, we might need to cross-reference with deals keying by ID or similar
-        // BUT current structure has SegmentedPayload separate. 
-        // For now, allow empty arrays or basic approximation if lead has 'segmento' prop? 
-        // The prompt said "ignore grouping logic". 
-        // We'll filter Google leads by some logic if available, or just pass all.
-        // Actually, let's just pass empty for specific segment breakdown if we can't link them easily yet.
-        // Wait, SegmentedLead doesn't have 'segmento'. 
-        // We will assume all for now to avoid errors.
-        const googleVarejo = googleLeads;
-        const googleProjeto = [];
+        const googleProjeto = [
+            ...filteredDealsBySegmento.projeto.ganhos,
+            ...filteredDealsBySegmento.projeto.perdidos,
+            ...filteredDealsBySegmento.projeto.andamento
+        ].filter(d => normalizeSource(d.fonte).includes('google'));
 
-        // Get available sources from raw (unfiltered) payload
+        const metaVarejo = [
+            ...filteredDealsBySegmento.varejo.ganhos,
+            ...filteredDealsBySegmento.varejo.perdidos,
+            ...filteredDealsBySegmento.varejo.andamento
+        ].filter(d => {
+            const s = normalizeSource(d.fonte);
+            return s.includes('meta') || s.includes('facebook') || s.includes('instagram');
+        });
+
+        const metaProjeto = [
+            ...filteredDealsBySegmento.projeto.ganhos,
+            ...filteredDealsBySegmento.projeto.perdidos,
+            ...filteredDealsBySegmento.projeto.andamento
+        ].filter(d => {
+            const s = normalizeSource(d.fonte);
+            return s.includes('meta') || s.includes('facebook') || s.includes('instagram');
+        });
+
+        // New Metrics ...
+        // 1. Leads Timeline
+        const timelineMap = new Map<string, number>();
+        allLeads.forEach(lead => {
+            if (lead.data_criacao) {
+                const date = lead.data_criacao.split('T')[0];
+                timelineMap.set(date, (timelineMap.get(date) || 0) + 1);
+            }
+        });
+        const leadsTimeline = Array.from(timelineMap.entries())
+            .map(([date, count]) => ({ date, count }))
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        // 2. Converted Breakdown
+        const getAllDeals = (statusObj: DealsByStatus) => [
+            ...statusObj.ganhos,
+            ...statusObj.perdidos,
+            ...statusObj.andamento
+        ];
+
+        const allVarejoDeals = getAllDeals(filteredDealsBySegmento.varejo);
+        const allProjetoDeals = getAllDeals(filteredDealsBySegmento.projeto);
+
+        const getSourcesDistributionDeals = (deals: typeof allVarejoDeals) => {
+            const sources: Record<string, number> = {};
+            deals.forEach(d => {
+                const s = d.fonte || 'Desconhecido';
+                sources[s] = (sources[s] || 0) + 1;
+            });
+            return Object.entries(sources)
+                .map(([name, value]) => ({ name, value }))
+                .sort((a, b) => b.value - a.value);
+        };
+
+        const convertedBreakdown = {
+            varejo: allVarejoDeals.length,
+            projeto: allProjetoDeals.length,
+            varejoSources: getSourcesDistributionDeals(allVarejoDeals),
+            projetoSources: getSourcesDistributionDeals(allProjetoDeals)
+        };
+
+        // 3. Discard Reasons (Using leads.descartados)
+        const discardReasonsMap: Record<string, number> = {};
+        filteredLeads.descartados.forEach(l => {
+            const reason = l.motivo_descarte || 'Não informado';
+            discardReasonsMap[reason] = (discardReasonsMap[reason] || 0) + 1;
+        });
+        const discardReasons = Object.entries(discardReasonsMap)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value);
+
+        // 4. Deal Loss Reasons (Using deals.por_status.perdidos) NEW
+        const lossReasonsMap: Record<string, number> = {};
+        filteredDealsByStatus.perdidos.forEach(d => {
+            const reason = d.motivo_perda || 'Não informado';
+            lossReasonsMap[reason] = (lossReasonsMap[reason] || 0) + 1;
+        });
+        const dealLossReasons = Object.entries(lossReasonsMap)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value);
+
+        // Get available options
         const availableSources = extractUniqueSources(rawPayload);
-        const sourceArrays = availableSources; // Assuming sourceArrays is just a rename or copy of availableSources
+        const availableUfs = extractUniqueUfs(rawPayload);
+        const availableRegionals = extractUniqueRegionals(rawPayload);
+
+        // Calculate Monthly Goal (always use rawPayload for current month context)
+        const monthlyGoal = calculateGoalMetrics(rawPayload);
 
         return {
             leads: filteredLeads,
@@ -417,22 +666,35 @@ export const useFilteredDashboard = (
             },
             metrics,
             availableSources,
+            availableUfs,
+            availableRegionals, // NEW
             geoData,
             marketingData: {
                 google: googleLeads,
                 meta: metaLeads,
+                indicacaoAmigo: indicacaoAmigoLeads,
+                profissional: profissionalLeads,
+                ltv: ltvLeads,
                 other: otherLeads,
                 googleVarejo,
-                googleProjeto
-            }
+                googleProjeto,
+                metaVarejo,
+                metaProjeto
+            },
+            leadsTimeline,
+            convertedBreakdown,
+            discardReasons,
+            dealLossReasons, // NEW
+            monthlyGoal // NEW
         };
-    }, [rawPayload, dateFilter, sourceFilter]);
+    }, [rawPayload, dateFilter, sourceFilter, ufFilter, regionalFilter]);
 
     return {
         ...filteredData,
         isLoading,
+        isSyncing, // New
         error,
-        refetch: fetchData,
+        refetch: syncData, // Override default refetch with sync logic
     };
 };
 

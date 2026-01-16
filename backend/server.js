@@ -34,6 +34,46 @@ app.get('/api/dashboard/raw', async (req, res) => {
   }
 });
 
+// GeoJSON endpoint
+app.get('/api/dashboard/geojson', async (req, res) => {
+    try {
+        const data = await dashboardService.getGeoJson();
+        res.json(data);
+    } catch (error) {
+        console.error('API Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// Proxy for Bitrix Sync Webhook (N8N)
+app.post('/api/sync', async (req, res) => {
+  try {
+    req.setTimeout(300000); 
+    
+    console.log('Triggering Bitrix sync...');
+
+    const response = await fetch('https://webhookrota.aled1.com/webhook/sync-bitrix-postgres', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({})
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text(); 
+      throw new Error(`Webhook failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Sync completed:', data);
+    res.json(data);
+  } catch (error) {
+    console.error('Sync Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health Check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });

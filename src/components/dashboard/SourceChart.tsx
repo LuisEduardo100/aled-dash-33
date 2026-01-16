@@ -10,20 +10,27 @@ interface SourceChartProps {
 const COLORS = {
   'Meta Ads': 'hsl(199, 89%, 48%)', // Info blue
   'Google Ads': 'hsl(38, 92%, 50%)', // Warning orange
-  'Orgânico/Outros': 'hsl(160, 84%, 39%)', // Primary green
+  'Indicação': 'hsl(142, 71%, 45%)', // Success green
+  'LTV': 'hsl(280, 65%, 60%)', // Purple for LTV
+  'Outros': 'hsl(160, 84%, 39%)', // Primary green
 };
 
 export function SourceChart({ leads, onBarClick }: SourceChartProps) {
   // Group leads by source
   const sourceData = leads.reduce((acc, lead) => {
-    let source = lead.fonte || 'Orgânico/Outros';
+    let source = lead.fonte || 'Outros';
+    const s = source.toLowerCase();
     // Group meta sources
-    if (source.toLowerCase().includes('meta') || source.toLowerCase().includes('facebook') || source.toLowerCase().includes('instagram')) {
+    if (s.includes('meta') || s.includes('facebook') || s.includes('instagram')) {
       source = 'Meta Ads';
-    } else if (source.toLowerCase().includes('google')) {
+    } else if (s.includes('google')) {
       source = 'Google Ads';
+    } else if (s.includes('indica')) {
+      source = 'Indicação';
+    } else if (s.includes('ltv')) {
+      source = 'LTV';
     } else {
-      source = 'Orgânico/Outros';
+      source = 'Outros';
     }
 
     if (!acc[source]) {
@@ -97,7 +104,7 @@ export function SourceChart({ leads, onBarClick }: SourceChartProps) {
                 {chartData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={COLORS[entry.name as keyof typeof COLORS] || COLORS['Orgânico/Outros']}
+                    fill={COLORS[entry.name as keyof typeof COLORS] || COLORS['Outros']}
                   />
                 ))}
               </Bar>
