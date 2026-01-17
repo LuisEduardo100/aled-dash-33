@@ -310,15 +310,59 @@ export const useFilteredDashboard = (
         setError(null);
 
         try {
-            const url = `${API_CONFIG.DASHBOARD_ENDPOINT}/raw`;
-            const response = await fetch(url);
+            let data;
+            
+            if (API_CONFIG.USE_MOCK_DATA) {
+                console.log('Using Mock Data for Dashboard');
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                // Import mock data dynamically or use imported
+                const { mockLeads, mockDeals } = await import('@/data/mockData');
+                
+                // Segment Mock Deals logic
+                const mockGanhos = mockDeals.filter(d => d.stage_id?.includes('WON'));
+                const mockPerdidos = mockDeals.filter(d => d.stage_id?.includes('LOSE') || d.stage_id?.includes('LOST'));
+                const mockAndamento = mockDeals.filter(d => !d.stage_id?.includes('WON') && !d.stage_id?.includes('LOSE') && !d.stage_id?.includes('LOST'));
 
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`);
+                data = {
+                    payload: {
+                        leads: mockLeads, // Array, will be handled by "if Array" logic below
+                        deals: {
+                            por_status: {
+                                ganhos: mockGanhos,
+                                perdidos: mockPerdidos,
+                                andamento: mockAndamento
+                            },
+                            // Optional: replicate segment structure if needed, but por_status is primary for totals
+                            por_segmento: {
+                                varejo: {
+                                    ganhos: mockGanhos.filter(d => d.category_id === '8'),
+                                    perdidos: mockPerdidos.filter(d => d.category_id === '8'),
+                                    andamento: mockAndamento.filter(d => d.category_id === '8')
+                                },
+                                projeto: {
+                                    ganhos: mockGanhos.filter(d => d.category_id === '126' || d.category_id === '134'),
+                                    perdidos: mockPerdidos.filter(d => d.category_id === '126' || d.category_id === '134'),
+                                    andamento: mockAndamento.filter(d => d.category_id === '126' || d.category_id === '134')
+                                },
+                                outros: {
+                                    ganhos: [], perdidos: [], andamento: []
+                                }
+                            }
+                        }
+                    }
+                };
+            } else {
+                const url = `${API_CONFIG.DASHBOARD_ENDPOINT}/raw`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                data = await response.json();
             }
-
-            const data = await response.json();
-            // ... (rest of processing logic is encapsulated in next steps or already present)
 
             // Extract payload from response and safely initialize structure
             const emptyDealStatus = { ganhos: [], perdidos: [], andamento: [] };
