@@ -1,8 +1,11 @@
-import { LayoutDashboard, Users, Briefcase, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart4, Sun, Moon, Trophy } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
+import { Switch } from '@/components/ui/switch';
+import { useTheme } from '@/components/ThemeProvider';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,11 +18,14 @@ import {
 
 const menuItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+  { title: 'Geração de Demanda', url: '/demand-generation', icon: BarChart4 },
+  { title: 'Performance Vendas', url: '/sales-performance', icon: Trophy },
   { title: 'Lista de Leads Avançada', url: '/advanced-leads', icon: Users },
 ];
 
 export function DashboardSidebar() {
   const { state } = useSidebar();
+  const { theme, setTheme } = useTheme();
   const isCollapsed = state === 'collapsed';
 
   return (
@@ -61,6 +67,22 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-    </Sidebar>
+  <SidebarFooter className="border-t border-border p-4">
+    <SidebarMenu>
+      <SidebarMenuItem>
+         <SidebarMenuButton 
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="w-full flex items-center justify-between"
+          >
+           <div className="flex items-center gap-2">
+              {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              <span>{theme === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</span>
+           </div>
+           <Switch checked={theme === 'dark'} onCheckedChange={(c) => setTheme(c ? 'dark' : 'light')} />
+         </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  </SidebarFooter>
+</Sidebar>
   );
 }

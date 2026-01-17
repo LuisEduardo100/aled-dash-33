@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SegmentedLead, SegmentedDeal } from '@/types/dashboard';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { HoverScrollContainer } from './HoverScrollContainer';
 
 interface AdvancedLeadsTableProps {
     leads: {
@@ -36,6 +38,7 @@ type UnifiedRow = {
     uf: string;
     responsavel: string;
     segmento: string;
+    funil: string;
     data: string; // Created or Closed date
     link_bitrix: string;
     link_kinbox?: string;
@@ -64,6 +67,7 @@ const formatDate = (dateStr: string) => {
 export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
     const [search, setSearch] = useState('');
     const [filterType, setFilterType] = useState<FilterType>('all');
+    const [funilFilter, setFunilFilter] = useState<string>('all');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'data', direction: 'desc' });
     const [limit, setLimit] = useState(50);
 
@@ -86,6 +90,7 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                     uf: l.uf || '-',
                     responsavel: l.responsavel_nome,
                     segmento: '-',
+                    funil: '-',
                     data: l.data_criacao,
                     link_bitrix: l.link_bitrix,
                     link_kinbox: l.link_kinbox,
@@ -109,6 +114,7 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                     uf: d.uf || '-',
                     responsavel: d.responsavel_nome,
                     segmento: d.segmento || '-',
+                    funil: d.funil || '-',
                     data: d.data_criacao, // Or data_fechamento for closed deals? Keeping creation for consistency unless requested
                     link_bitrix: d.link_bitrix,
                     link_kinbox: d.link_kinbox,
@@ -129,6 +135,16 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
         return rows;
     }, [leads, deals]);
 
+    // Get available funnels from deals
+    const availableFunnels = useMemo(() => {
+        const funnels = new Set<string>();
+        [...deals.por_status.ganhos, ...deals.por_status.perdidos, ...deals.por_status.andamento]
+            .forEach(d => {
+                if (d.funil && d.funil !== '-') funnels.add(d.funil);
+            });
+        return ['all', ...Array.from(funnels).sort()];
+    }, [deals]);
+
     // 2. Filter & Search
     const filteredData = useMemo(() => {
         return unifiedData.filter(row => {
@@ -142,7 +158,9 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
 
             if (!matchesSearch) return false;
 
-            // Type Filter
+            // Funil Filter
+            if (funilFilter !== 'all' && row.funil !== funilFilter) return false;
+
             // Type Filter
             if (filterType === 'all') return true;
 
@@ -162,7 +180,7 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
 
             return true;
         });
-    }, [unifiedData, search, filterType]);
+    }, [unifiedData, search, filterType, funilFilter]);
 
     // 3. Sort
     const sortedData = useMemo(() => {
@@ -258,6 +276,18 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                                 onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
+                        <Select value={funilFilter} onValueChange={setFunilFilter}>
+                            <SelectTrigger className="w-[200px]">
+                                <SelectValue placeholder="Filtrar por Funil" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableFunnels.map(funil => (
+                                    <SelectItem key={funil} value={funil}>
+                                        {funil === 'all' ? 'Todos os Funis' : funil}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
@@ -273,8 +303,8 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                 </div>
             </CardHeader>
             <CardContent className="px-0">
-                <div className="rounded-md border">
-                    <Table>
+                <HoverScrollContainer className="rounded-md border">
+                    <Table className="min-w-max">
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[50px] text-center">#</TableHead>
@@ -286,6 +316,7 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                                 <SortableHead label="UF" colKey="uf" />
                                 <SortableHead label="Responsável" colKey="responsavel" />
                                 <SortableHead label="Segmento" colKey="segmento" />
+                                <SortableHead label="Funil" colKey="funil" />
                                 <SortableHead label="Data" colKey="data" />
                                 <TableHead className="text-right">Ações</TableHead>
                             </TableRow>
@@ -307,6 +338,7 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                                         <TableCell className="text-muted-foreground text-sm">{row.uf}</TableCell>
                                         <TableCell className="text-sm">{row.responsavel}</TableCell>
                                         <TableCell className="text-muted-foreground text-sm">{row.segmento}</TableCell>
+                                        <TableCell className="text-muted-foreground text-sm">{row.funil}</TableCell>
                                         <TableCell className="text-muted-foreground text-sm">{formatDate(row.data)}</TableCell>
                                         <TableCell>
                                             <div className="flex justify-end gap-2">
@@ -345,7 +377,7 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                             )}
                         </TableBody>
                     </Table>
-                </div>
+                </HoverScrollContainer>
 
                 {/* Load More Trigger */}
                 {visibleData.length < filteredData.length && (

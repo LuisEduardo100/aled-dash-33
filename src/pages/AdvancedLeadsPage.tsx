@@ -14,6 +14,7 @@ export default function AdvancedLeadsPage() {
     });
     const [sourceFilter, setSourceFilter] = useState('Todos');
     const [ufFilter, setUfFilter] = useState('Todos');
+    const [regionalFilter, setRegionalFilter] = useState('Todos');
 
     // Use the new filtered dashboard hook
     const {
@@ -21,15 +22,20 @@ export default function AdvancedLeadsPage() {
         deals,
         availableSources,
         availableUfs,
+        availableRegionals,
         isLoading,
+        isSyncing,
         error,
         refetch
-    } = useFilteredDashboard(dateFilter, sourceFilter === 'Todos' ? null : sourceFilter, ufFilter === 'Todos' ? null : ufFilter);
+    } = useFilteredDashboard(
+        dateFilter, 
+        sourceFilter === 'Todos' ? null : sourceFilter, 
+        ufFilter === 'Todos' ? null : ufFilter,
+        regionalFilter === 'Todos' ? null : regionalFilter
+    );
 
     // Dark mode
-    useEffect(() => {
-        document.documentElement.classList.add('dark');
-    }, []);
+
 
     return (
         <DashboardLayout>
@@ -44,6 +50,9 @@ export default function AdvancedLeadsPage() {
                     ufFilter={ufFilter}
                     onUfFilterChange={setUfFilter}
                     availableUfs={availableUfs}
+                    regionalFilter={regionalFilter}
+                    onRegionalFilterChange={setRegionalFilter}
+                    availableRegionals={availableRegionals || ['Todos']}
                     onRefresh={refetch}
                     isLoading={isLoading}
                 />

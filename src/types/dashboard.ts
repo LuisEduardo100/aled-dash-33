@@ -29,6 +29,7 @@ export interface SegmentedDeal {
     regional?: string; // New: Regional filter
     uf?: string; // For map
     cidade?: string;
+    funil?: string; // Pipeline/Funnel name (e.g., "Varejo", "Projeto")
     status_nome: string; // "Ganho", "Perdido", "Em Andamento" - display directly
     motivo_perda?: string; // New: For Lost Deals analysis
     responsavel_nome: string; // Pre-treated, display directly

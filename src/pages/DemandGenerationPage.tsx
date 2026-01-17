@@ -1,0 +1,141 @@
+import React from 'react';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { useFilteredDashboard } from '@/hooks/useFilteredDashboard';
+import { useDemandGoals } from '@/hooks/useDemandGoals';
+import { useDemandMetrics } from '@/hooks/useDemandMetrics';
+import { GoalsConfigSheet } from '@/components/demand/GoalsConfigSheet';
+import { ExecutiveCards } from '@/components/demand/ExecutiveCards';
+import { GoalGaugeChart } from '@/components/demand/GoalGaugeChart';
+import { DailyProgressChart } from '@/components/demand/DailyProgressChart';
+import { ChannelShareChart } from '@/components/demand/ChannelShareChart';
+import { ChannelPerformanceTable } from '@/components/demand/ChannelPerformanceTable';
+import { Loader2, BarChart4, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+const DemandGenerationPage: React.FC = () => {
+    // Fetch ALL data by passing undefined date filters
+    // This allows useDemandMetrics to have access to full history for its own filtering logic
+    const { deals, isLoading, error, refetch } = useFilteredDashboard(
+        { startDate: undefined, endDate: undefined }, // Open filter = all data
+        null, // source
+        null, // uf
+        null  // regional
+    );
+
+    const { goals, updateGoals, resetToDefaults } = useDemandGoals();
+    
+    // Transform useFilteredDashboard's pre-segmented data to the structure useDemandMetrics expects
+    const dealsData = React.useMemo(() => {
+        if (!deals || !deals.por_status) {
+            return { ganhos: [], perdidos: [], andamento: [] };
+        }
+        return {
+            ganhos: deals.por_status.ganhos || [],
+            perdidos: deals.por_status.perdidos || [],
+            andamento: deals.por_status.andamento || []
+        };
+    }, [deals]);
+
+    const metrics = useDemandMetrics(dealsData, goals);
+
+    if (isLoading) {
+        return (
+            <SidebarProvider>
+                <div className="min-h-screen flex w-full bg-background">
+                    <DashboardSidebar />
+                    <main className="flex-1 p-6 flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-4">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <p className="text-muted-foreground">Carregando dados...</p>
+                        </div>
+                    </main>
+                </div>
+            </SidebarProvider>
+        );
+    }
+
+    if (error) {
+        return (
+            <SidebarProvider>
+                <div className="min-h-screen flex w-full bg-background">
+                    <DashboardSidebar />
+                    <main className="flex-1 p-6 flex items-center justify-center">
+                        <div className="text-center">
+                            <p className="text-red-400 mb-4">Erro ao carregar dados</p>
+                            <Button onClick={() => refetch()}>Tentar Novamente</Button>
+                        </div>
+                    </main>
+                </div>
+            </SidebarProvider>
+        );
+    }
+
+    return (
+        <SidebarProvider>
+            <div className="min-h-screen flex w-full bg-background">
+                <DashboardSidebar />
+                <main className="flex-1 p-6 overflow-auto">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <BarChart4 className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-foreground">Geração de Demanda</h1>
+                                <p className="text-sm text-muted-foreground">
+                                    Acompanhamento de metas mensais por canal
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => refetch()}
+                                disabled={isLoading}
+                                className="mr-2"
+                            >
+                                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                                Atualizar
+                            </Button>
+                            <GoalsConfigSheet 
+                                goals={goals}
+                                onSave={updateGoals}
+                                onReset={resetToDefaults}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Executive Summary Cards */}
+                    <div className="mb-6">
+                        <ExecutiveCards metrics={metrics} />
+                    </div>
+
+                    {/* Charts Row */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                        <div className="lg:col-span-1">
+                            <GoalGaugeChart metrics={metrics} />
+                        </div>
+                        <div className="lg:col-span-2">
+                            <DailyProgressChart metrics={metrics} />
+                        </div>
+                    </div>
+
+                    {/* Second Charts Row */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                        <div className="lg:col-span-1">
+                            <ChannelShareChart metrics={metrics} />
+                        </div>
+                        <div className="lg:col-span-2">
+                            <ChannelPerformanceTable metrics={metrics} />
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </SidebarProvider>
+    );
+};
+
+export default DemandGenerationPage;

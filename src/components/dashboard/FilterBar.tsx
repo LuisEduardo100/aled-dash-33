@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Filter, RefreshCw, MapPin } from 'lucide-react';
+import { Calendar, Filter, RefreshCw, MapPin, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { DateFilter } from '@/types/dashboard';
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
 
 interface FilterBarProps {
     dateFilter: DateFilter;
@@ -23,8 +25,18 @@ interface FilterBarProps {
     availableRegionals?: string[];
     onRefresh: () => void;
     isLoading?: boolean;
-    isSyncing?: boolean; // New prop
+    isSyncing?: boolean;
 }
+
+const REGIONAL_DESCRIPTIONS: Record<string, string> = {
+    'Todos': 'Exibe todos os dados de todas as regionais',
+    'Regional CE': 'Somente os dados do Ceará',
+    'Regional PI': 'Somente os dados do Piauí',
+    'Regional NE': 'Todos os estados do Nordeste exceto CE e PI',
+    'Regional SP': 'Somente São Paulo',
+    'Regional Brasil': 'Todo Brasil exceto Regional CE, PI, NE e SP',
+    'Regional BR': 'Todo Brasil exceto Regional CE, PI, NE e SP',
+};
 
 type DatePreset = 'hoje' | 'ultimos7' | 'mesAtual' | 'custom';
 
@@ -42,13 +54,12 @@ export function FilterBar({
     availableRegionals,
     onRefresh,
     isLoading = false,
-    isSyncing = false, // New prop
+    isSyncing = false,
 }: FilterBarProps) {
     const [activePreset, setActivePreset] = useState<DatePreset>('mesAtual');
     const [showCustomPicker, setShowCustomPicker] = useState(false);
     const [tempDate, setTempDate] = useState<DateRange | undefined>();
 
-    // Reset temp state when popover opens to ensure fresh selection flow
     useEffect(() => {
         if (showCustomPicker) {
             setTempDate(undefined);
@@ -86,7 +97,6 @@ export function FilterBar({
 
     const handleCustomDateSelect = (range: DateRange | undefined) => {
         setTempDate(range);
-
         if (range?.from && range?.to) {
             onDateFilterChange({
                 startDate: startOfDay(range.from),
@@ -102,143 +112,152 @@ export function FilterBar({
     };
 
     return (
-        <div className="flex flex-wrap items-center gap-3 p-4 bg-card border border-border rounded-lg">
-            {/* Date Preset Buttons */}
-            <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div className="flex gap-1">
-                    <Button
-                        variant={activePreset === 'hoje' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => handlePresetClick('hoje')}
-                    >
-                        Hoje
-                    </Button>
-                    <Button
-                        variant={activePreset === 'ultimos7' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => handlePresetClick('ultimos7')}
-                    >
-                        Últimos 7 dias
-                    </Button>
-                    <Button
-                        variant={activePreset === 'mesAtual' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => handlePresetClick('mesAtual')}
-                    >
-                        Mês Atual
-                    </Button>
-                    <Popover open={showCustomPicker} onOpenChange={setShowCustomPicker}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={activePreset === 'custom' ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => {
-                                    setActivePreset('custom');
-                                    setShowCustomPicker(true);
-                                }}
-                            >
-                                {activePreset === 'custom' ? getDateRangeLabel() : 'Personalizado'}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                                mode="range"
-                                selected={tempDate}
-                                onSelect={handleCustomDateSelect}
-                                numberOfMonths={1}
-                                locale={ptBR}
-                            />
-                        </PopoverContent>
-                    </Popover>
+        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 p-4 bg-card/60 backdrop-blur-sm border border-border/60 rounded-xl shadow-sm">
+            {/* Date Filters Group */}
+            <div className="flex flex-wrap items-center gap-2 bg-muted/30 p-1 rounded-lg border border-border/30">
+                <Button
+                    variant={activePreset === 'hoje' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handlePresetClick('hoje')}
+                    className={cn("h-7 text-xs rounded-md transition-all", activePreset === 'hoje' && "shadow-sm")}
+                >
+                    Hoje
+                </Button>
+                <Button
+                    variant={activePreset === 'ultimos7' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handlePresetClick('ultimos7')}
+                    className={cn("h-7 text-xs rounded-md transition-all", activePreset === 'ultimos7' && "shadow-sm")}
+                >
+                    7 Dias
+                </Button>
+                <Button
+                    variant={activePreset === 'mesAtual' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handlePresetClick('mesAtual')}
+                    className={cn("h-7 text-xs rounded-md transition-all", activePreset === 'mesAtual' && "shadow-sm")}
+                >
+                    Mês Atual
+                </Button>
+                <div className="w-px h-4 bg-border/50 mx-1" />
+                <Popover open={showCustomPicker} onOpenChange={setShowCustomPicker}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={activePreset === 'custom' ? 'secondary' : 'outline'}
+                            size="sm"
+                            onClick={() => {
+                                setActivePreset('custom');
+                                setShowCustomPicker(true);
+                            }}
+                            className={cn("h-7 text-xs rounded-md gap-2 border-dashed font-normal", activePreset === 'custom' && "border-solid bg-secondary")}
+                        >
+                            <Calendar className="h-3.5 w-3.5" />
+                            {activePreset === 'custom' ? getDateRangeLabel() : 'Personalizado'}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                            mode="range"
+                            selected={tempDate}
+                            onSelect={handleCustomDateSelect}
+                            numberOfMonths={1}
+                            locale={ptBR}
+                        />
+                    </PopoverContent>
+                </Popover>
+            </div>
+
+            <div className="hidden lg:block w-px h-6 bg-border/50" />
+
+            {/* Dropdown Filters Group */}
+            <div className="flex flex-wrap items-center gap-3">
+                {/* Source Filter */}
+                <div className="flex items-center gap-2">
+                    <Select value={sourceFilter} onValueChange={onSourceFilterChange}>
+                        <SelectTrigger className="w-[160px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <Filter className="h-3.5 w-3.5" />
+                                <span className="font-medium text-foreground truncate">{sourceFilter === 'Todos' ? 'Todas Fontes' : sourceFilter}</span>
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent align="start" className="rounded-xl">
+                            {availableSources.map(source => (
+                                <SelectItem key={source} value={source} className="text-sm">
+                                    {source}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
-            </div>
 
-            {/* Divider */}
-            <div className="h-6 w-px bg-border" />
-
-            {/* Source Filter */}
-            <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={sourceFilter} onValueChange={onSourceFilterChange}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Filtrar por fonte" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableSources.map(source => (
-                            <SelectItem key={source} value={source}>
-                                {source}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {/* UF Filter */}
-            {ufFilter && onUfFilterChange && availableUfs && (
-                <>
-                    <div className="h-6 w-px bg-border text-muted-foreground" />
+                {/* Regional Filter */}
+                {onRegionalFilterChange && availableRegionals && (
                     <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <Select value={ufFilter} onValueChange={onUfFilterChange}>
-                            <SelectTrigger className="w-[140px]">
-                                <SelectValue placeholder="UF/Região" />
+                         <Select value={regionalFilter} onValueChange={onRegionalFilterChange}>
+                            <SelectTrigger className="w-[150px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    <span className="font-medium text-foreground truncate">{regionalFilter === 'Todos' ? 'Todas Regionais' : regionalFilter}</span>
+                                </div>
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent align="start" className="rounded-xl">
+                                {availableRegionals.map(reg => (
+                                    <SelectItem key={reg} value={reg} className="text-sm">
+                                        <div className="flex items-center justify-between w-full gap-2">
+                                            <span>{reg}</span>
+                                            {REGIONAL_DESCRIPTIONS[reg] && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/70 hover:text-muted-foreground cursor-help shrink-0" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="right" className="max-w-[200px]">
+                                                        <p className="text-xs">{REGIONAL_DESCRIPTIONS[reg]}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            )}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+
+                 {/* UF Filter - Only if Regional is specific or needed */}
+                 {ufFilter && onUfFilterChange && availableUfs && (
+                    <div className="flex items-center gap-2">
+                        <Select value={ufFilter} onValueChange={onUfFilterChange}>
+                            <SelectTrigger className="w-[100px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
+                                <span className="font-medium text-foreground truncate">{ufFilter === 'Todos' ? 'Todas UFs' : ufFilter}</span>
+                            </SelectTrigger>
+                            <SelectContent align="start" className="rounded-xl">
                                 {availableUfs.map(uf => (
-                                    <SelectItem key={uf} value={uf}>
+                                    <SelectItem key={uf} value={uf} className="text-sm">
                                         {uf}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
-                </>
-            )}
+                )}
+            </div>
 
-            {/* Regional Filter */}
-            {onRegionalFilterChange && availableRegionals && (
-                <>
-                    <div className="h-6 w-px bg-border text-muted-foreground" />
-                    <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <Select value={regionalFilter} onValueChange={onRegionalFilterChange}>
-                            <SelectTrigger className="w-[140px]">
-                                <SelectValue placeholder="Regional" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableRegionals.map(reg => (
-                                    <SelectItem key={reg} value={reg}>
-                                        {reg}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </>
-            )}
-
-            {/* Spacer */}
             <div className="flex-1" />
 
-            {/* Refresh Button */}
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={onRefresh}
-                disabled={isLoading || isSyncing}
-                className="gap-2"
-            >
-                <RefreshCw className={`h-4 w-4 ${isLoading || isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Sincronizando...' : 'Atualizar'}
-            </Button>
-
-            {/* Current Filter Display */}
-            <div className="text-sm text-muted-foreground hidden lg:block">
-                {getDateRangeLabel()}
-                {sourceFilter !== 'Todos' && ` • Fonte: ${sourceFilter}`}
-                {ufFilter && ufFilter !== 'Todos' && ` • UF: ${ufFilter}`}
-                {regionalFilter && regionalFilter !== 'Todos' && ` • Regional: ${regionalFilter}`}
+            {/* Actions */}
+            <div className="flex items-center gap-2 pl-4 border-l border-border/50">
+                 <div className="bg-muted/30 px-3 py-1.5 rounded-md border border-border/30 text-xs font-medium text-muted-foreground hidden xl:block">
+                     {activePreset === 'custom' ? getDateRangeLabel() : activePreset === 'mesAtual' ? 'Este Mês' : activePreset === 'ultimos7' ? 'Últimos 7 dias' : 'Hoje'}
+                 </div>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onRefresh}
+                    disabled={isLoading || isSyncing}
+                    className="h-9 w-9 p-0 rounded-full hover:bg-muted"
+                >
+                    <RefreshCw className={cn("h-4 w-4 text-muted-foreground", (isLoading || isSyncing) && "animate-spin text-primary")} />
+                </Button>
             </div>
         </div>
     );

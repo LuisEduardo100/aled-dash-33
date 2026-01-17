@@ -90,10 +90,7 @@ export default function Dashboard() {
     regionalFilter === 'Todos' ? null : regionalFilter // NEW
   );
 
-  // Dark mode
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-  }, []);
+
 
   // Modal handlers
   const closeModal = () => {

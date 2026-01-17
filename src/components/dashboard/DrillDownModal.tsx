@@ -127,7 +127,7 @@ const DealRow = React.memo(({
     {showSource && (
       <TableCell className="text-muted-foreground text-sm">{deal.fonte || '-'}</TableCell>
     )}
-    <TableCell className="text-muted-foreground">{deal.regional || '-'}</TableCell>
+    <TableCell className="text-muted-foreground">{deal.funil || '-'}</TableCell>
     <TableCell className="text-muted-foreground">{deal.uf || '-'}</TableCell>
     <TableCell className="text-muted-foreground text-sm">
       {deal.status_nome === 'Perdido' ? (deal.motivo_perda || '-') : '-'}
@@ -234,7 +234,7 @@ const LeadsTable = ({
   return (
     <>
       <HoverScrollContainer className="rounded-md border">
-        <Table className="w-full">
+        <Table className="min-w-max">
           <TableHeader>
             <TableRow className="bg-muted/50 whitespace-nowrap">
               <TableHead className="w-[50px] text-center">#</TableHead>
@@ -298,7 +298,7 @@ const DealsTable = ({
           case 'status': aValue = a.status_nome; bValue = b.status_nome; break;
           case 'responsavel': aValue = a.responsavel_nome; bValue = b.responsavel_nome; break;
           case 'fonte': aValue = a.fonte; bValue = b.fonte; break;
-          case 'regional': aValue = a.regional; bValue = b.regional; break;
+          case 'funil': aValue = a.funil; bValue = b.funil; break;
           case 'uf': aValue = a.uf; bValue = b.uf; break;
           case 'motivo': aValue = a.motivo_perda; bValue = b.motivo_perda; break;
           case 'data': aValue = a.data_fechamento || a.data_criacao; bValue = b.data_fechamento || b.data_criacao; break;
@@ -341,7 +341,7 @@ const DealsTable = ({
   return (
     <>
       <HoverScrollContainer className="rounded-md border">
-        <Table className="w-full">
+        <Table className="min-w-max">
           <TableHeader>
             <TableRow className="bg-muted/50 whitespace-nowrap">
               <TableHead className="w-[50px] text-center">#</TableHead>
@@ -350,7 +350,7 @@ const DealsTable = ({
               <SortHead label="Status" sortKey="status" />
               <SortHead label="Responsável" sortKey="responsavel" />
               {showSource && <SortHead label="Fonte" sortKey="fonte" />}
-              <SortHead label="Regional" sortKey="regional" />
+              <SortHead label="Funil" sortKey="funil" />
               <SortHead label="UF" sortKey="uf" />
               <SortHead label="Motivo Perda" sortKey="motivo" />
               <SortHead label="Data" sortKey="data" />
@@ -434,7 +434,7 @@ export function DrillDownModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="h-[65vh]">
+        <div className="h-[65vh] overflow-y-auto overflow-x-hidden">
           {/* Segmented View with Tabs */}
           {segmentedData ? (
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
@@ -504,7 +504,7 @@ export function DrillDownModal({
               Nenhum registro encontrado
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

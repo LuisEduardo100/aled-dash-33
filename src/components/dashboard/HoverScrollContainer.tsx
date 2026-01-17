@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -7,86 +7,164 @@ interface HoverScrollContainerProps {
     className?: string;
 }
 
-export const HoverScrollContainer = ({ children, className }: HoverScrollContainerProps) => {
-    const scrollRef = useRef<HTMLDivElement>(null);
+export const HoverScrollContainer: React.FC<HoverScrollContainerProps> = ({ children, className }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
-    const scrollInterval = useRef<NodeJS.Timeout | null>(null);
+    const [isHovered, setIsHovered] = useState(false);
+    const [arrowTop, setArrowTop] = useState('50%');
+    const scrollIntervalRef = useRef<number | null>(null);
 
-    const checkScroll = () => {
-        if (scrollRef.current) {
-            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-            setCanScrollLeft(scrollLeft > 0);
-            setCanScrollRight(Math.ceil(scrollLeft) < scrollWidth - clientWidth);
-        }
-    };
+    const checkScroll = useCallback(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        const { scrollLeft, scrollWidth, clientWidth } = container;
+        setCanScrollLeft(scrollLeft > 0);
+        setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }, []);
 
-    useEffect(() => {
-        checkScroll();
-        window.addEventListener('resize', checkScroll);
-        return () => window.removeEventListener('resize', checkScroll);
+    // Calcula a posição vertical das setas baseado na parte visível do container
+    const updateArrowPosition = useCallback(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        
+        // Limites visíveis do container na viewport
+        const visibleTop = Math.max(rect.top, 0);
+        const visibleBottom = Math.min(rect.bottom, viewportHeight);
+        
+        // Centro da área visível, relativo ao container
+        const centerInViewport = (visibleTop + visibleBottom) / 2;
+        const centerRelativeToContainer = centerInViewport - rect.top;
+        
+        // Garante que fica dentro do container (com padding)
+        const minTop = 30;
+        const maxTop = rect.height - 30;
+        const clampedTop = Math.max(minTop, Math.min(maxTop, centerRelativeToContainer));
+        
+        setArrowTop(`${clampedTop}px`);
     }, []);
 
     useEffect(() => {
-        const observer = new MutationObserver(checkScroll);
-        if (scrollRef.current) {
-            observer.observe(scrollRef.current, { childList: true, subtree: true });
-        }
-        return () => observer.disconnect();
-    }, [children]);
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        
+        checkScroll();
+        updateArrowPosition();
+        
+        container.addEventListener('scroll', checkScroll);
+        window.addEventListener('resize', checkScroll);
+        window.addEventListener('resize', updateArrowPosition);
+        
+        // Listener de scroll em TODOS os scroll contexts (page, modal, etc)
+        const handleScroll = () => {
+            updateArrowPosition();
+        };
+        window.addEventListener('scroll', handleScroll, true);
+        
+        const resizeObserver = new ResizeObserver(() => {
+            checkScroll();
+            updateArrowPosition();
+        });
+        resizeObserver.observe(container);
+
+        const t1 = setTimeout(checkScroll, 100);
+        const t2 = setTimeout(updateArrowPosition, 100);
+
+        return () => {
+            container.removeEventListener('scroll', checkScroll);
+            window.removeEventListener('resize', checkScroll);
+            window.removeEventListener('resize', updateArrowPosition);
+            window.removeEventListener('scroll', handleScroll, true);
+            resizeObserver.disconnect();
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, [children, checkScroll, updateArrowPosition]);
+
+    // Atualiza posição continuamente enquanto hover
+    useEffect(() => {
+        if (!isHovered) return;
+        
+        updateArrowPosition();
+        const interval = setInterval(updateArrowPosition, 50);
+        return () => clearInterval(interval);
+    }, [isHovered, updateArrowPosition]);
 
     const startScrolling = (direction: 'left' | 'right') => {
         stopScrolling();
-        scrollInterval.current = setInterval(() => {
-            if (scrollRef.current) {
-                // Increased scroll speed for better feel
-                const scrollAmount = direction === 'left' ? -20 : 20;
-                scrollRef.current.scrollLeft += scrollAmount;
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        const scrollAmount = direction === 'left' ? -20 : 20;
+        
+        const animate = () => {
+            if (container) {
+                container.scrollLeft += scrollAmount;
+                checkScroll();
+                scrollIntervalRef.current = requestAnimationFrame(animate);
             }
-        }, 10); // ~100fps smoother
+        };
+        scrollIntervalRef.current = requestAnimationFrame(animate);
     };
 
     const stopScrolling = () => {
-        if (scrollInterval.current) {
-            clearInterval(scrollInterval.current);
-            scrollInterval.current = null;
+        if (scrollIntervalRef.current) {
+            cancelAnimationFrame(scrollIntervalRef.current);
+            scrollIntervalRef.current = null;
         }
     };
 
+    const arrowButtonClass = "h-11 w-11 rounded-full bg-slate-900/95 border border-slate-600 shadow-xl flex items-center justify-center text-white hover:scale-110 hover:bg-slate-800 transition-all cursor-pointer";
+
     return (
-        <div className={cn("relative group isolation-auto", className)} onMouseLeave={stopScrolling}>
-            {canScrollLeft && (
-                <div
-                    className="absolute left-0 top-0 bottom-0 w-16 z-20 flex items-center justify-start cursor-pointer group/arrow"
+        <div 
+            ref={containerRef}
+            className={cn("relative", className)}
+            onMouseEnter={() => { setIsHovered(true); checkScroll(); updateArrowPosition(); }}
+            onMouseLeave={() => { setIsHovered(false); stopScrolling(); }}
+        >
+            {/* SETA ESQUERDA */}
+            {isHovered && canScrollLeft && (
+                <button
                     onMouseEnter={() => startScrolling('left')}
                     onMouseLeave={stopScrolling}
+                    className={cn(arrowButtonClass, "absolute left-2 z-50")}
+                    style={{ 
+                        top: arrowTop, 
+                        transform: 'translateY(-50%)',
+                        transition: 'top 0.1s ease-out'
+                    }}
                 >
-                    {/* Half-circle arrow on the left */}
-                    <div className="absolute left-0 bg-background/80 hover:bg-background border-r border-y border-border rounded-r-full p-2 py-8 shadow-sm transition-all opacity-50 group-hover/arrow:opacity-100 flex items-center justify-center -ml-2 hover:ml-0 duration-300">
-                        <ChevronLeft className="h-6 w-6 text-muted-foreground/70" />
-                    </div>
-                </div>
+                    <ChevronLeft className="h-6 w-6" />
+                </button>
             )}
 
+            {/* CONTEÚDO */}
             <div
-                ref={scrollRef}
-                className="overflow-x-auto w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] scroll-smooth"
-                onScroll={checkScroll}
+                ref={scrollContainerRef}
+                className="overflow-x-auto w-full [&::-webkit-scrollbar]:hidden"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 {children}
             </div>
 
-            {canScrollRight && (
-                <div
-                    className="absolute right-0 top-0 bottom-0 w-16 z-20 flex items-center justify-end cursor-pointer group/arrow"
+            {/* SETA DIREITA */}
+            {isHovered && canScrollRight && (
+                <button
                     onMouseEnter={() => startScrolling('right')}
                     onMouseLeave={stopScrolling}
+                    className={cn(arrowButtonClass, "absolute right-2 z-50")}
+                    style={{ 
+                        top: arrowTop, 
+                        transform: 'translateY(-50%)',
+                        transition: 'top 0.1s ease-out'
+                    }}
                 >
-                    {/* Half-circle arrow on the right */}
-                    <div className="absolute right-0 bg-background/80 hover:bg-background border-l border-y border-border rounded-l-full p-2 py-8 shadow-sm transition-all opacity-50 group-hover/arrow:opacity-100 flex items-center justify-center -mr-2 hover:mr-0 duration-300">
-                        <ChevronRight className="h-6 w-6 text-muted-foreground/70" />
-                    </div>
-                </div>
+                    <ChevronRight className="h-6 w-6" />
+                </button>
             )}
         </div>
     );

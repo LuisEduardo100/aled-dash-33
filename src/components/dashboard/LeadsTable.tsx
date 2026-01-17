@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { CRMLead, getLeadStatusInfo, getSourceAttribution } from '@/types/crm';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { HoverScrollContainer } from './HoverScrollContainer';
 
 interface LeadsTableProps {
   leads: CRMLead[];
@@ -149,8 +150,8 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border overflow-x-auto">
-        <Table>
+      <HoverScrollContainer className="rounded-lg border border-border">
+        <Table className="min-w-[2500px]">
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead
@@ -241,7 +242,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
             )}
           </TableBody>
         </Table>
-      </div>
+      </HoverScrollContainer>
 
       {/* Pagination */}
       {totalPages > 1 && (
