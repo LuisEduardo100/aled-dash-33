@@ -49,7 +49,7 @@ export interface DemandMetrics {
     dailyData: { day: number; faturamento: number; oportunidades: number }[];
 }
 
-function mapSourceToChannel(fonte: string): keyof ChannelGoals {
+function mapSourceToChannel(fonte: string): keyof ChannelGoals | 'outros' {
     const fonteLower = (fonte || '').toLowerCase();
     
     if (fonteLower.includes('google')) return 'google';
@@ -81,26 +81,21 @@ export function useDemandMetrics(
         const daysInMonth = getDaysInMonth(today);
         const daysRemaining = Math.max(1, daysInMonth - currentDay);
         
-        console.log('DemandMetrics Input:', { 
-            ganhos: deals.ganhos.length, 
-            andamento: deals.andamento.length,
-            perdidos: deals.perdidos.length,
-            currentMonth: currentM,
-            currentYear: currentY
-        });
-
-        // Initialize channel accumulators
+        // Initialize channel accumulators (Removed 'outros', Added 'novosLeads')
         const channelFaturamento: Record<keyof ChannelGoals, number> = {
-            google: 0, meta: 0, indicacaoAmigo: 0, indicacaoProfissional: 0, ltv: 0, outros: 0
+            google: 0, meta: 0, indicacaoAmigo: 0, indicacaoProfissional: 0, ltv: 0, novosLeads: 0
         };
         const channelOportunidades: Record<keyof ChannelGoals, number> = {
-            google: 0, meta: 0, indicacaoAmigo: 0, indicacaoProfissional: 0, ltv: 0, outros: 0
+            google: 0, meta: 0, indicacaoAmigo: 0, indicacaoProfissional: 0, ltv: 0, novosLeads: 0
         };
         
         // Daily accumulator for chart
         const dailyFaturamento: Record<number, number> = {};
         const dailyOportunidades: Record<number, number> = {};
         
+        let totalRealizedFat = 0;
+        let totalRealizedOpp = 0;
+
         // Process ganhos (Faturamento + Oportunidades contribution)
         deals.ganhos.forEach(deal => {
             const channel = mapSourceToChannel(deal.fonte);
@@ -110,8 +105,20 @@ export function useDemandMetrics(
                 try {
                     const closeDate = new Date(deal.data_fechamento);
                     if (closeDate.getMonth() === currentM && closeDate.getFullYear() === currentY) {
-                         const val = deal.valor || 0;
-                         channelFaturamento[channel] += val;
+                         const val = Number(deal.valor) || 0;
+                         
+                         // Update Channel Bucket
+                         if (channel !== 'outros') {
+                             channelFaturamento[channel] += val;
+                         }
+                         
+                         // Update Novos Leads Bucket
+                         if (deal.is_novo) {
+                             channelFaturamento['novosLeads'] += val;
+                         }
+
+                         // Update Total (Actual Revenue)
+                         totalRealizedFat += val;
                          
                          const day = getDate(closeDate);
                          dailyFaturamento[day] = (dailyFaturamento[day] || 0) + val;
@@ -120,20 +127,27 @@ export function useDemandMetrics(
             }
             
             // Oportunidades contribution (from Won deals): based on CREATION DATE
-            // "Demand Created This Month" includes Won deals created this month
             if (deal.data_criacao) {
                 try {
                      const createDate = new Date(deal.data_criacao);
                      if (createDate.getMonth() === currentM && createDate.getFullYear() === currentY) {
-                         const val = deal.valor || 0;
-                         channelOportunidades[channel] += val;
+                         const val = Number(deal.valor) || 0;
+
+                         // Update Channel Bucket
+                         if (channel !== 'outros') {
+                             channelOportunidades[channel] += val;
+                         }
+
+                         // Update Novos Leads Bucket
+                         if (deal.is_novo) {
+                             channelOportunidades['novosLeads'] += val;
+                         }
+
+                         // Update Total
+                         totalRealizedOpp += val;
                          
-                         // Note: dailyOportunidades is based on CREATION date
                          const day = getDate(createDate);
                          dailyOportunidades[day] = (dailyOportunidades[day] || 0) + val;
-                     } else {
-                         // Debug log for date mismatch if needed
-                         // if (deals.ganhos.length < 5) console.log('Skipped Won Deal (Date):', deal.titulo, deal.data_criacao);
                      }
                 } catch(e) {}
             }
@@ -147,8 +161,20 @@ export function useDemandMetrics(
                  try {
                      const createDate = new Date(deal.data_criacao);
                      if (createDate.getMonth() === currentM && createDate.getFullYear() === currentY) {
-                         const val = deal.valor || 0;
-                         channelOportunidades[channel] += val;
+                         const val = Number(deal.valor) || 0;
+                         
+                         // Update Channel Bucket
+                         if (channel !== 'outros') {
+                             channelOportunidades[channel] += val;
+                         }
+
+                         // Update Novos Leads Bucket
+                         if (deal.is_novo) {
+                             channelOportunidades['novosLeads'] += val;
+                         }
+
+                         // Update Total
+                         totalRealizedOpp += val;
                          
                          const day = getDate(createDate);
                          dailyOportunidades[day] = (dailyOportunidades[day] || 0) + val;
@@ -157,22 +183,14 @@ export function useDemandMetrics(
             }
         });
 
-        // Debug output
-        const totalFat = Object.values(channelFaturamento).reduce((a, b) => a + b, 0);
-        const totalOpp = Object.values(channelOportunidades).reduce((a, b) => a + b, 0);
-        console.log('Calculated Totals:', { totalFat, totalOpp });
-
+        // Use the explicitly calculated totals
+        const faturamentoRealizado = totalRealizedFat;
+        const oportunidadesRealizado = totalRealizedOpp;
         
-        // Calculate totals
-        const faturamentoRealizado = totalFat;
-        const oportunidadesRealizado = totalOpp;
+        // Correctly calculate Meta Total: LTV + Novos Leads (since Novos Leads already subsumes acq channels in global total logic)
+        const faturamentoMeta = (goals.faturamento.ltv || 0) + (goals.faturamento.novosLeads || 0);
         
-        const faturamentoMeta = 
-            goals.faturamento.google + goals.faturamento.meta + 
-            goals.faturamento.indicacaoAmigo + goals.faturamento.indicacaoProfissional + goals.faturamento.ltv + goals.faturamento.outros;
-        const oportunidadesMeta = 
-            goals.oportunidades.google + goals.oportunidades.meta + 
-            goals.oportunidades.indicacaoAmigo + goals.oportunidades.indicacaoProfissional + goals.oportunidades.ltv + goals.oportunidades.outros;
+        const oportunidadesMeta = (goals.oportunidades.ltv || 0) + (goals.oportunidades.novosLeads || 0);
         
         // Progress calculations
         const faturamentoProgress = faturamentoMeta > 0 ? (faturamentoRealizado / faturamentoMeta) * 100 : 0;
@@ -183,16 +201,11 @@ export function useDemandMetrics(
         const faturamentoPacing = faturamentoProgress - expectedProgress;
         const oportunidadesPacing = oportunidadesProgress - expectedProgress;
         
-        // Projection (Revised: Pipeline Based for Revenue)
-        // If conversionRate is set, use Pipeline Created * Conversion Rate
-        // If not, fall back to linear extrapolation of Realized Revenue? 
-        // Logic: "Projected Revenue" = Realized Revenue + (Open Qualified Pipeline * Conversion Rate)?
-        // Wait, 'oportunidadesRealizado' includes 'ganhos'. So 'Pipeline Total' = 'Realized' + 'Open'.
-        // So 'Projected' = 'Pipeline Total' * 'Conversion'.
+        // Projection
         const conversionRate = goals.conversionRate || 20; // Default 20%
         const faturamentoProjection = (oportunidadesRealizado * conversionRate) / 100;
         
-        // Oportunidades Projection (Linear extrapolation of pipeline creation volume)
+        // Oportunidades Projection
         const dailyAvgOportunidades = currentDay > 0 ? oportunidadesRealizado / currentDay : 0;
         const oportunidadesProjection = dailyAvgOportunidades * daysInMonth;
         
@@ -207,7 +220,7 @@ export function useDemandMetrics(
             indicacaoAmigo: 'Indicação Amigo',
             indicacaoProfissional: 'Indicação Profissional',
             ltv: 'LTV / Recompra',
-            outros: 'Outros',
+            novosLeads: 'Novos Leads/Clientes',
         };
         
         const channelMetrics: ChannelMetrics[] = (Object.keys(channelLabels) as (keyof ChannelGoals)[]).map(key => {

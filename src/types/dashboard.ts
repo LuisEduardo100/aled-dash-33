@@ -143,6 +143,21 @@ export interface FilteredDashboardData {
     discardReasons: { name: string; value: number }[];
     dealLossReasons: { name: string; value: number }[]; // New: Reasons for lost deals
     monthlyGoal: MonthlyGoalMetrics; // New: Goal section data
+    
+    // New: Goal/Performance Chart Data
+    channelPerformance: { 
+        name: string; 
+        revenue: number; 
+        opportunities: number; 
+        revenueTarget: number; 
+        oppsTarget: number; 
+    }[];
+
+    // New: Novos Leads Logic
+    novosLeadsMetrics: {
+        count: number;
+        revenue: number;
+    };
 }
 
 export interface MonthlyGoalMetrics {

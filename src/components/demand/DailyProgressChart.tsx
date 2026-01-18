@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { DemandMetrics } from '@/hooks/useDemandMetrics';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface DailyProgressChartProps {
     metrics: DemandMetrics;
@@ -146,23 +148,15 @@ export const DailyProgressChart: React.FC<DailyProgressChartProps> = ({ metrics 
                 <h4 className="text-sm font-medium text-muted-foreground">
                     📈 {chartTitle}
                 </h4>
-                <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-lg">
-                    <Button 
-                        variant={metricType === 'faturamento' ? 'secondary' : 'ghost'} 
-                        size="sm" 
-                        className="h-7 text-xs"
-                        onClick={() => setMetricType('faturamento')}
-                    >
-                        Faturamento
-                    </Button>
-                    <Button 
-                        variant={metricType === 'oportunidades' ? 'secondary' : 'ghost'} 
-                        size="sm" 
-                        className="h-7 text-xs"
-                        onClick={() => setMetricType('oportunidades')}
-                    >
-                        Oportunidades
-                    </Button>
+                <div className="flex items-center space-x-2">
+                    <Label htmlFor="metric-toggle" className="text-xs text-muted-foreground">
+                        {metricType === 'faturamento' ? 'Faturamento' : 'Oportunidades'}
+                    </Label>
+                    <Switch
+                        id="metric-toggle"
+                        checked={metricType === 'oportunidades'}
+                        onCheckedChange={(checked) => setMetricType(checked ? 'oportunidades' : 'faturamento')}
+                    />
                 </div>
             </div>
             <ReactECharts

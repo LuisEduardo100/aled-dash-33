@@ -702,6 +702,17 @@ export const useFilteredDashboard = (
         // Calculate Monthly Goal (always use rawPayload for current month context)
         const monthlyGoal = calculateGoalMetrics(rawPayload);
 
+        // Helper for parsing currency values
+        const parseValue = (val: string | number | undefined | null): number => {
+            if (val === undefined || val === null) return 0;
+            if (typeof val === 'number') return val;
+            if (typeof val === 'string') {
+                const clean = val.replace(/[^\d,\.-]/g, '').replace(/\./g, '').replace(',', '.');
+                return parseFloat(clean) || 0;
+            }
+            return 0;
+        };
+
         return {
             leads: filteredLeads,
             deals: {
@@ -729,7 +740,75 @@ export const useFilteredDashboard = (
             convertedBreakdown,
             discardReasons,
             dealLossReasons, // NEW
-            monthlyGoal // NEW
+            monthlyGoal, // NEW
+
+            // NEW: Channel Performance Data (Combo Chart)
+            channelPerformance: (() => {
+                const results = [
+                    { name: 'Google', revenue: 0, opportunities: 0, revenueTarget: 0, oppsTarget: 0 }, // Targets 0 for now
+                    { name: 'Meta', revenue: 0, opportunities: 0, revenueTarget: 0, oppsTarget: 0 },
+                    { name: 'Indicação Profissional', revenue: 0, opportunities: 0, revenueTarget: 0, oppsTarget: 0 },
+                    { name: 'LTV', revenue: 0, opportunities: 0, revenueTarget: 0, oppsTarget: 0 },
+                    { name: 'Indicação Amigo', revenue: 0, opportunities: 0, revenueTarget: 0, oppsTarget: 0 },
+                    { name: 'Novos Leads/Clientes', revenue: 0, opportunities: 0, revenueTarget: 770000, oppsTarget: 3850000 }
+                ];
+
+                const normalize = (s: string) => (s || '').toLowerCase();
+                
+                const allDeals = [
+                    ...filteredDealsByStatus.ganhos,
+                    ...filteredDealsByStatus.perdidos,
+                    ...filteredDealsByStatus.andamento
+                ];
+
+                allDeals.forEach(d => {
+                    const val = parseValue(d.valor);
+                    const src = normalize(d.fonte);
+                    
+                    // Helper to add to channel
+                    const addTo = (name: string) => {
+                        const item = results.find(r => r.name === name);
+                        if (item) {
+                            item.opportunities += val;
+                            if (d.status_nome?.toLowerCase().includes('ganho') || d.status_nome?.toLowerCase().includes('won')) {
+                                item.revenue += val;
+                            }
+                        }
+                    };
+
+                    // Access Control / Mapping
+                    if (src.includes('google')) addTo('Google');
+                    else if (src.includes('meta') || src.includes('facebook') || src.includes('instagram')) addTo('Meta');
+                    else if (src.includes('profissional')) addTo('Indicação Profissional');
+                    else if (src.includes('ltv')) addTo('LTV');
+                    else if (src.includes('indicação amigo') || src.includes('indicacao amigo')) addTo('Indicação Amigo');
+                    
+                    // Novos Leads Check
+                    if (d.is_novo) {
+                        addTo('Novos Leads/Clientes');
+                    }
+                });
+
+                return results;
+            })(),
+
+            // NEW: Novos Leads Metrics (Single Card usage)
+            novosLeadsMetrics: (() => {
+                const newDeals = [
+                    ...filteredDealsByStatus.ganhos,
+                    ...filteredDealsByStatus.perdidos,
+                    ...filteredDealsByStatus.andamento
+                ].filter(d => d.is_novo);
+
+                const revenue = newDeals
+                    .filter(d => d.status_nome?.toLowerCase().includes('ganho') || d.status_nome?.toLowerCase().includes('won'))
+                    .reduce((acc, d) => acc + parseValue(d.valor), 0);
+                
+                return {
+                    count: newDeals.length,
+                    revenue
+                };
+            })()
         };
     }, [rawPayload, dateFilter, sourceFilter, ufFilter, regionalFilter]);
 

@@ -45,7 +45,7 @@ type UnifiedRow = {
     raw: SegmentedLead | SegmentedDeal;
 };
 
-type FilterType = 'all' | 'attending' | 'in_progress' | 'won' | 'lost' | 'retail' | 'project';
+type FilterType = 'all' | 'attending' | 'in_progress' | 'won' | 'lost' | 'retail' | 'project' | 'new_clients';
 type SortConfig = { key: keyof UnifiedRow | 'data_parsed'; direction: 'asc' | 'desc' };
 
 const formatCurrency = (value: number | null) => {
@@ -125,7 +125,6 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
 
         addLeads(leads.em_atendimento, 'Em Atendimento');
         addLeads(leads.descartados, 'Descartado');
-        // Converted leads often become deals, but we list them if they are in the leads list
         addLeads(leads.convertidos, 'Convertido');
 
         addDeals(deals.por_status.andamento, 'Em Andamento');
@@ -177,6 +176,11 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
             if (filterType === 'lost') return row.statusLabel === 'Perdido' || row.statusLabel === 'Descartado';
             if (filterType === 'retail') return row.type === 'deal' && row.segmento.toLowerCase().includes('varejo');
             if (filterType === 'project') return row.type === 'deal' && row.segmento.toLowerCase().includes('projeto');
+            
+            // "Novos Clientes"
+            if (filterType === 'new_clients') {
+                return (row.raw as any).is_novo === true;
+            }
 
             return true;
         });
@@ -300,6 +304,9 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                     <Button variant={filterType === 'lost' ? 'default' : 'outline'} size="sm" onClick={() => setFilterType('lost')}>Perdidos / Descartados</Button>
                     <Button variant={filterType === 'retail' ? 'default' : 'outline'} size="sm" onClick={() => setFilterType('retail')}>Varejo</Button>
                     <Button variant={filterType === 'project' ? 'default' : 'outline'} size="sm" onClick={() => setFilterType('project')}>Projeto</Button>
+                    <Button variant={filterType === 'new_clients' ? 'default' : 'outline'} size="sm" onClick={() => setFilterType('new_clients')} className="border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-500">
+                        ✨ Novos Clientes
+                    </Button>
                 </div>
             </CardHeader>
             <CardContent className="px-0">

@@ -6,7 +6,7 @@ export interface ChannelGoals {
     indicacaoAmigo: number;
     indicacaoProfissional: number;
     ltv: number;
-    outros: number;
+    novosLeads: number; // Replaced 'outros'
 }
 
 export interface DemandGoals {
@@ -22,7 +22,7 @@ const DEFAULT_GOALS: DemandGoals = {
         indicacaoAmigo: 200000,
         indicacaoProfissional: 170000,
         ltv: 330000,
-        outros: 0,
+        novosLeads: 770000,
     },
     oportunidades: {
         google: 1500000,
@@ -30,7 +30,7 @@ const DEFAULT_GOALS: DemandGoals = {
         indicacaoAmigo: 1000000,
         indicacaoProfissional: 850000,
         ltv: 1650000,
-        outros: 0,
+        novosLeads: 3850000,
     },
     conversionRate: 20, // 20% default
 };
@@ -60,7 +60,7 @@ export function useDemandGoals() {
                         indicacaoAmigo: sanitize(fatur.indicacaoAmigo ?? DEFAULT_GOALS.faturamento.indicacaoAmigo),
                         indicacaoProfissional: sanitize(fatur.indicacaoProfissional ?? DEFAULT_GOALS.faturamento.indicacaoProfissional),
                         ltv: sanitize(fatur.ltv ?? DEFAULT_GOALS.faturamento.ltv),
-                        outros: sanitize(fatur.outros ?? DEFAULT_GOALS.faturamento.outros),
+                        novosLeads: sanitize(fatur.novosLeads ?? DEFAULT_GOALS.faturamento.novosLeads),
                     },
                     oportunidades: {
                         google: sanitize(oport.google ?? DEFAULT_GOALS.oportunidades.google),
@@ -68,7 +68,7 @@ export function useDemandGoals() {
                         indicacaoAmigo: sanitize(oport.indicacaoAmigo ?? DEFAULT_GOALS.oportunidades.indicacaoAmigo),
                         indicacaoProfissional: sanitize(oport.indicacaoProfissional ?? DEFAULT_GOALS.oportunidades.indicacaoProfissional),
                         ltv: sanitize(oport.ltv ?? DEFAULT_GOALS.oportunidades.ltv),
-                        outros: sanitize(oport.outros ?? DEFAULT_GOALS.oportunidades.outros),
+                        novosLeads: sanitize(oport.novosLeads ?? DEFAULT_GOALS.oportunidades.novosLeads),
                     },
                     conversionRate: sanitize(parsed.conversionRate ?? DEFAULT_GOALS.conversionRate),
                 };
@@ -101,7 +101,7 @@ export function useDemandGoals() {
         goals.faturamento.indicacaoAmigo + 
         goals.faturamento.indicacaoProfissional + 
         goals.faturamento.ltv +
-        goals.faturamento.outros;
+        goals.faturamento.novosLeads;
 
     const totalOportunidadesMeta = 
         goals.oportunidades.google + 
@@ -109,7 +109,7 @@ export function useDemandGoals() {
         goals.oportunidades.indicacaoAmigo + 
         goals.oportunidades.indicacaoProfissional + 
         goals.oportunidades.ltv +
-        goals.oportunidades.outros;
+        goals.oportunidades.novosLeads;
 
     return {
         goals,
