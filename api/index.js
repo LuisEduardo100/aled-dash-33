@@ -1,6 +1,6 @@
-const express = require('express');
-const cors = require('cors');
-const dashboardService = require('./dashboardService');
+import express from 'express';
+import cors from 'cors';
+import * as dashboardService from './dashboardService.js';
 
 // Initialize Express
 const app = express();
@@ -81,4 +81,4 @@ app.get('/api/health', (req, res) => {
 });
 
 // Export the app for Vercel Serverless
-module.exports = app;
+export default app;

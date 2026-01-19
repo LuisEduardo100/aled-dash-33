@@ -1,8 +1,8 @@
-const db = require('./db');
+import { query } from './db.js';
 
-const getDashboardData = async (scope = 'mes_atual') => {
+export const getDashboardData = async (scope = 'mes_atual') => {
   try {
-    const result = await db.query(
+    const result = await query(
       'SELECT payload FROM dashboard_leads_lovable WHERE scope = $1 LIMIT 1',
       [scope]
     );
@@ -33,10 +33,10 @@ const getDashboardData = async (scope = 'mes_atual') => {
 };
 
 // Return raw data for frontend processing
-const getRawData = async (scope = 'mes_atual') => {
+export const getRawData = async (scope = 'mes_atual') => {
   try {
     console.log(`Querying raw data for scope: ${scope}`);
-    let result = await db.query(
+    let result = await query(
       'SELECT payload FROM dashboard_leads_lovable WHERE scope = $1 LIMIT 1',
       [scope]
     );
@@ -49,10 +49,10 @@ const getRawData = async (scope = 'mes_atual') => {
       // If 'id' doesn't exist, this might fail, so we wrap in try/catch or use a safer assumption?
       // User said "SELECT * ... deu certo". The table likely has an ID.
       try {
-          result = await db.query('SELECT payload, scope FROM dashboard_leads_lovable ORDER BY id DESC LIMIT 1');
+          result = await query('SELECT payload, scope FROM dashboard_leads_lovable ORDER BY id DESC LIMIT 1');
       } catch (e) {
           console.warn('Fallback ORDER BY id failed, trying simple LIMIT 1', e);
-          result = await db.query('SELECT payload, scope FROM dashboard_leads_lovable LIMIT 1');
+          result = await query('SELECT payload, scope FROM dashboard_leads_lovable LIMIT 1');
       }
       
       if (result.rows.length === 0) {
@@ -89,11 +89,11 @@ const getEmptyFallback = () => ({
   },
   performance_by_seller: [],
   charts: { map: [], sources: [], timeline: [] },
-  charts: { map: [], sources: [], timeline: [] }, // Kept duplicate key from original to match logic
+  // charts: { map: [], sources: [], timeline: [] }, // Removed duplicate key
 });
 
 // Fetch GeoJSON from external source
-const getGeoJson = async () => {
+export const getGeoJson = async () => {
     try {
         const response = await fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson');
         if (!response.ok) {
@@ -106,6 +106,7 @@ const getGeoJson = async () => {
     }
 };
 
+// ... helpers ... (calculateLeadKPIs, etc.)
 // A. KPIs Gerais de Leads
 const calculateLeadKPIs = (leads) => {
   const total = leads.length;
@@ -270,5 +271,3 @@ const formatChartData = (leads, deals) => {
     timeline: timelineChart
   };
 };
-
-module.exports = { getDashboardData, getRawData, getGeoJson };
