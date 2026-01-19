@@ -32,11 +32,14 @@ export function DashboardSidebar() {
     <Sidebar collapsible="icon" className="border-r border-border">
       <SidebarHeader className="p-4 border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">CRM</span>
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white">
+            <img src="/aled_atacadaoled_logo.jfif" alt="Aled Logo" className="w-full h-full object-cover" />
           </div>
           {!isCollapsed && (
-            <span className="font-semibold text-foreground">Sales Hub</span>
+            <div className="flex flex-col">
+              <span className="font-semibold text-foreground leading-tight">Dashboard Aled</span>
+              <span className="text-[10px] text-muted-foreground">Dados do CRM Bitrix24</span>
+            </div>
           )}
         </div>
       </SidebarHeader>

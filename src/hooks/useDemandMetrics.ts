@@ -214,13 +214,15 @@ export function useDemandMetrics(
         const oportunidadesDailyRequired = (oportunidadesMeta - oportunidadesRealizado) / daysRemaining;
         
         // Build channel metrics
-        const channelLabels: Record<keyof ChannelGoals, string> = {
+        // We exclude 'novosLeads' from the list because it is an aggregate of the acquisition channels (Google, Meta, etc.)
+        // Including it would cause double counting in the table totals.
+        const channelLabels: Partial<Record<keyof ChannelGoals, string>> = {
             google: 'Google Ads',
             meta: 'Meta Ads',
             indicacaoAmigo: 'Indicação Amigo',
             indicacaoProfissional: 'Indicação Profissional',
             ltv: 'LTV / Recompra',
-            novosLeads: 'Novos Leads/Clientes',
+            // novosLeads excluded from visual table
         };
         
         const channelMetrics: ChannelMetrics[] = (Object.keys(channelLabels) as (keyof ChannelGoals)[]).map(key => {
