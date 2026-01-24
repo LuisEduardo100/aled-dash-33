@@ -62,6 +62,19 @@ const filterByRegional = <T extends { regional?: string }>(items: T[], regional:
     return items.filter(item => (item.regional || 'N/A') === regional);
 };
 
+const filterByFunnel = <T extends { id: string }>(items: T[], allowedIds: Set<string> | null): T[] => {
+    if (!allowedIds) return items;
+    return items.filter(item => allowedIds.has(item.id));
+};
+
+const filterStatusObjByFunnel = (statusObj: DealsByStatus, allowedIds: Set<string> | null): DealsByStatus => {
+    return {
+        ganhos: filterByFunnel(statusObj.ganhos, allowedIds),
+        perdidos: filterByFunnel(statusObj.perdidos, allowedIds),
+        andamento: filterByFunnel(statusObj.andamento, allowedIds),
+    };
+};
+
 const filterLeadsByDate = (leads: SegmentedLead[] | undefined, filter: DateFilter, strict: boolean): SegmentedLead[] => {
     if (!leads) return [];
     if (!filter.startDate || !filter.endDate) return leads;
@@ -288,6 +301,20 @@ const extractUniqueRegionals = (payload: SegmentedPayload): string[] => {
     return ['Todos', ...Array.from(regionals).sort()];
 }
 
+const extractUniqueFunnels = (payload: SegmentedPayload): string[] => {
+    const funnels = new Set<string>();
+    const gather = (list: any[]) => list?.forEach(i => { if (i.funil) funnels.add(i.funil); });
+
+    // Gather from por_status which should contain all deals
+    if (payload.deals?.por_status) {
+        gather(payload.deals.por_status.ganhos);
+        gather(payload.deals.por_status.perdidos);
+        gather(payload.deals.por_status.andamento);
+    }
+
+    return ['Todos', ...Array.from(funnels).sort()];
+};
+
 // ... calculateMetrics ...
 
 // ========== MAIN HOOK ==========
@@ -295,7 +322,8 @@ export const useFilteredDashboard = (
     dateFilter: DateFilter,
     sourceFilter: string | null = null,
     ufFilter: string | null = null,
-    regionalFilter: string | null = null // NEW
+    regionalFilter: string | null = null,
+    funnelFilter: string | null = null // NEW
 ) => {
     // ... fetchData logic (same) ...
 
@@ -492,7 +520,27 @@ export const useFilteredDashboard = (
 
     // Apply filters and calculate metrics
     const filteredData: FilteredDashboardData = useMemo(() => {
+        // Calculate allowed IDs for Funnel Filter
+        let allowedDealIds: Set<string> | null = null;
+        if (funnelFilter && funnelFilter !== 'Todos') {
+            allowedDealIds = new Set<string>();
+            
+            const gatherIds = (list: SegmentedDeal[]) => list.forEach(d => {
+                // Loose comparison to catch whitespace or case issues
+                if (d.funil && d.funil.trim() === funnelFilter.trim()) {
+                    allowedDealIds!.add(d.id);
+                }
+            });
+
+            if (rawPayload.deals?.por_status) {
+                gatherIds(rawPayload.deals.por_status.ganhos);
+                gatherIds(rawPayload.deals.por_status.perdidos);
+                gatherIds(rawPayload.deals.por_status.andamento);
+            }
+        }
+        
         // Filter leads
+
         const filteredLeads = {
             em_atendimento: filterByRegional(filterByUf(filterBySource(
                 filterLeadsByDate(rawPayload.leads.em_atendimento, dateFilter, false),
@@ -517,33 +565,40 @@ export const useFilteredDashboard = (
             regionalFilter
         );
 
+        // Apply Funnel Filter to Status Deals
+        const filteredDealsByStatusFiltered = {
+            ganhos: filterByFunnel(filteredDealsByStatus.ganhos, allowedDealIds),
+            perdidos: filterByFunnel(filteredDealsByStatus.perdidos, allowedDealIds),
+            andamento: filterByFunnel(filteredDealsByStatus.andamento, allowedDealIds),
+        };
+
         // Filter deals by segment
         const filteredDealsBySegmento = {
-            varejo: filterDealsByStatus(
+            varejo: filterStatusObjByFunnel(filterDealsByStatus(
                 rawPayload.deals.por_segmento?.varejo || { ganhos: [], perdidos: [], andamento: [] },
                 dateFilter,
                 sourceFilter,
                 ufFilter,
                 regionalFilter
-            ),
-            projeto: filterDealsByStatus(
+            ), allowedDealIds),
+            projeto: filterStatusObjByFunnel(filterDealsByStatus(
                 rawPayload.deals.por_segmento?.projeto || { ganhos: [], perdidos: [], andamento: [] },
                 dateFilter,
                 sourceFilter,
                 ufFilter,
                 regionalFilter
-            ),
-            outros: filterDealsByStatus(
+            ), allowedDealIds),
+            outros: filterStatusObjByFunnel(filterDealsByStatus(
                 rawPayload.deals.por_segmento?.outros || { ganhos: [], perdidos: [], andamento: [] },
                 dateFilter,
                 sourceFilter,
                 ufFilter,
                 regionalFilter
-            ),
+            ), allowedDealIds),
         };
 
         // Calculate metrics from filtered data
-        const metrics = calculateMetrics(filteredLeads, filteredDealsByStatus);
+        const metrics = calculateMetrics(filteredLeads, filteredDealsByStatusFiltered);
 
         // ... geoData calc (same) ...
         // Calculate Geo Data for Map
@@ -686,7 +741,7 @@ export const useFilteredDashboard = (
 
         // 4. Deal Loss Reasons (Using deals.por_status.perdidos) NEW
         const lossReasonsMap: Record<string, number> = {};
-        filteredDealsByStatus.perdidos.forEach(d => {
+        filteredDealsByStatusFiltered.perdidos.forEach(d => {
             const reason = d.motivo_perda || 'Não informado';
             lossReasonsMap[reason] = (lossReasonsMap[reason] || 0) + 1;
         });
@@ -698,6 +753,7 @@ export const useFilteredDashboard = (
         const availableSources = extractUniqueSources(rawPayload);
         const availableUfs = extractUniqueUfs(rawPayload);
         const availableRegionals = extractUniqueRegionals(rawPayload);
+        const availableFunnels = extractUniqueFunnels(rawPayload);
 
         // Calculate Monthly Goal (always use rawPayload for current month context)
         const monthlyGoal = calculateGoalMetrics(rawPayload);
@@ -717,12 +773,13 @@ export const useFilteredDashboard = (
             leads: filteredLeads,
             deals: {
                 por_segmento: filteredDealsBySegmento,
-                por_status: filteredDealsByStatus,
+                por_status: filteredDealsByStatusFiltered,
             },
             metrics,
             availableSources,
             availableUfs,
             availableRegionals, // NEW
+            availableFunnels, // NEW
             geoData,
             marketingData: {
                 google: googleLeads,
@@ -756,9 +813,9 @@ export const useFilteredDashboard = (
                 const normalize = (s: string) => (s || '').toLowerCase();
                 
                 const allDeals = [
-                    ...filteredDealsByStatus.ganhos,
-                    ...filteredDealsByStatus.perdidos,
-                    ...filteredDealsByStatus.andamento
+                    ...filteredDealsByStatusFiltered.ganhos,
+                    ...filteredDealsByStatusFiltered.perdidos,
+                    ...filteredDealsByStatusFiltered.andamento
                 ];
 
                 allDeals.forEach(d => {
@@ -795,9 +852,9 @@ export const useFilteredDashboard = (
             // NEW: Novos Leads Metrics (Single Card usage)
             novosLeadsMetrics: (() => {
                 const newDeals = [
-                    ...filteredDealsByStatus.ganhos,
-                    ...filteredDealsByStatus.perdidos,
-                    ...filteredDealsByStatus.andamento
+                    ...filteredDealsByStatusFiltered.ganhos,
+                    ...filteredDealsByStatusFiltered.perdidos,
+                    ...filteredDealsByStatusFiltered.andamento
                 ].filter(d => d.is_novo);
 
                 const revenue = newDeals
@@ -810,7 +867,7 @@ export const useFilteredDashboard = (
                 };
             })()
         };
-    }, [rawPayload, dateFilter, sourceFilter, ufFilter, regionalFilter]);
+    }, [rawPayload, dateFilter, sourceFilter, ufFilter, regionalFilter, funnelFilter]);
 
     return {
         ...filteredData,

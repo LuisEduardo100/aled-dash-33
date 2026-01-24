@@ -54,6 +54,7 @@ export default function Dashboard() {
   const [sourceFilter, setSourceFilter] = useState('Todos');
   const [ufFilter, setUfFilter] = useState('Todos');
   const [regionalFilter, setRegionalFilter] = useState('Todos');
+  const [funnelFilter, setFunnelFilter] = useState('Todos'); // NEW
 
   // Modal state
   const [modalState, setModalState] = useState<ModalState>({
@@ -72,6 +73,7 @@ export default function Dashboard() {
     availableSources,
     availableUfs,
     availableRegionals, // NEW
+    availableFunnels, // NEW
     geoData,
     marketingData,
     leadsTimeline,
@@ -87,7 +89,8 @@ export default function Dashboard() {
     dateFilter,
     sourceFilter === 'Todos' ? null : sourceFilter,
     ufFilter === 'Todos' ? null : ufFilter,
-    regionalFilter === 'Todos' ? null : regionalFilter // NEW
+    regionalFilter === 'Todos' ? null : regionalFilter, // NEW
+    funnelFilter === 'Todos' ? null : funnelFilter // NEW
   );
 
 
@@ -236,6 +239,9 @@ export default function Dashboard() {
           regionalFilter={regionalFilter} // NEW
           onRegionalFilterChange={setRegionalFilter} // NEW
           availableRegionals={availableRegionals} // NEW
+          funnelFilter={funnelFilter} // NEW
+          onFunnelFilterChange={setFunnelFilter} // NEW
+          availableFunnels={availableFunnels} // NEW
           onRefresh={refetch}
           isLoading={isLoading}
           isSyncing={isSyncing} // New

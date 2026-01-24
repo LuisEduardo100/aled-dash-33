@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Filter, RefreshCw, MapPin, HelpCircle } from 'lucide-react';
+import { Calendar, Filter, RefreshCw, MapPin, HelpCircle, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -23,6 +23,9 @@ interface FilterBarProps {
     regionalFilter?: string;
     onRegionalFilterChange?: (reg: string) => void;
     availableRegionals?: string[];
+    funnelFilter?: string;
+    onFunnelFilterChange?: (funnel: string) => void;
+    availableFunnels?: string[];
     onRefresh: () => void;
     isLoading?: boolean;
     isSyncing?: boolean;
@@ -52,6 +55,9 @@ export function FilterBar({
     regionalFilter,
     onRegionalFilterChange,
     availableRegionals,
+    funnelFilter,
+    onFunnelFilterChange,
+    availableFunnels,
     onRefresh,
     isLoading = false,
     isSyncing = false,
@@ -189,6 +195,27 @@ export function FilterBar({
                         </SelectContent>
                     </Select>
                 </div>
+
+                {/* Funnel Filter */}
+                {onFunnelFilterChange && availableFunnels && (
+                    <div className="flex items-center gap-2">
+                         <Select value={funnelFilter} onValueChange={onFunnelFilterChange}>
+                            <SelectTrigger className="w-[150px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Layers className="h-3.5 w-3.5" />
+                                    <span className="font-medium text-foreground truncate">{funnelFilter === 'Todos' ? 'Todos Funis' : funnelFilter}</span>
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent align="start" className="rounded-xl">
+                                {availableFunnels.map(funnel => (
+                                    <SelectItem key={funnel} value={funnel} className="text-sm">
+                                        {funnel}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
 
                 {/* Regional Filter */}
                 {onRegionalFilterChange && availableRegionals && (

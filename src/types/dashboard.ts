@@ -116,6 +116,7 @@ export interface FilteredDashboardData {
     metrics: CalculatedMetrics;
     availableSources: string[];
     availableUfs: string[];
+    availableFunnels: string[]; // New: Available Funnel/Segment options
     availableRegionals: string[]; // New: Available Regional options
     geoData: {
         leads: Record<string, { total: number; sources: Record<string, number>; leads: SegmentedLead[] }>;
