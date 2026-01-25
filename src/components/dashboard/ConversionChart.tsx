@@ -71,7 +71,7 @@ export function ConversionChart({ deals, onSegmentClick }: ConversionChartProps)
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-lg">Análise de Conversão</CardTitle>
+        <CardTitle className="text-lg">Análise de Renda Gerada</CardTitle>
       </CardHeader>
       <CardContent>
         {chartData.length > 0 ? (
