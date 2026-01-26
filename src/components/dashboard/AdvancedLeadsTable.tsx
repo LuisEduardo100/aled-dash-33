@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ExternalLink, MessageSquare, Search, ArrowUpDown } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -176,7 +176,7 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
             if (filterType === 'lost') return row.statusLabel === 'Perdido' || row.statusLabel === 'Descartado';
             if (filterType === 'retail') return row.type === 'deal' && row.segmento.toLowerCase().includes('varejo');
             if (filterType === 'project') return row.type === 'deal' && row.segmento.toLowerCase().includes('projeto');
-            
+
             // "Novos Clientes"
             if (filterType === 'new_clients') {
                 return (row.raw as any).is_novo === true;
@@ -223,6 +223,13 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
 
     // 4. Pagination / Limit
     const visibleData = sortedData.slice(0, limit);
+
+    // 5. Calculate Total Value of FILTERED items
+    const totalValue = useMemo(() => {
+        return filteredData.reduce((acc, row) => {
+            return acc + (row.valor || 0);
+        }, 0);
+    }, [filteredData]);
 
     const handleSort = (key: keyof UnifiedRow) => {
         setSortConfig(current => ({
@@ -383,9 +390,18 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                                 </TableRow>
                             )}
                         </TableBody>
+
+                        <TableFooter className="bg-muted/50 font-medium">
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-right pr-4">Total (Filtrado):</TableCell>
+                                <TableCell className="text-left font-bold text-foreground">
+                                    {formatCurrency(totalValue)}
+                                </TableCell>
+                                <TableCell colSpan={7}></TableCell>
+                            </TableRow>
+                        </TableFooter>
                     </Table>
                 </HoverScrollContainer>
-
                 {/* Load More Trigger */}
                 {visibleData.length < filteredData.length && (
                     <div className="flex justify-center pt-4">

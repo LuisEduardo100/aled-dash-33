@@ -180,10 +180,10 @@ export function FilterBar({
                 {/* Source Filter */}
                 <div className="flex items-center gap-2">
                     <Select value={sourceFilter} onValueChange={onSourceFilterChange}>
-                        <SelectTrigger className="w-[160px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Filter className="h-3.5 w-3.5" />
-                                <span className="font-medium text-foreground truncate">{sourceFilter === 'Todos' ? 'Todas Fontes' : sourceFilter}</span>
+                        <SelectTrigger className="w-auto min-w-[140px] max-w-[200px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground w-full min-w-0">
+                                <Filter className="h-3.5 w-3.5 shrink-0" />
+                                <span className="font-medium text-foreground truncate flex-1 text-left">{sourceFilter === 'Todos' ? 'Todas Fontes' : sourceFilter}</span>
                             </div>
                         </SelectTrigger>
                         <SelectContent align="start" className="rounded-xl">
@@ -199,11 +199,11 @@ export function FilterBar({
                 {/* Funnel Filter */}
                 {onFunnelFilterChange && availableFunnels && (
                     <div className="flex items-center gap-2">
-                         <Select value={funnelFilter} onValueChange={onFunnelFilterChange}>
-                            <SelectTrigger className="w-[150px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Layers className="h-3.5 w-3.5" />
-                                    <span className="font-medium text-foreground truncate">{funnelFilter === 'Todos' ? 'Todos Funis' : funnelFilter}</span>
+                        <Select value={funnelFilter} onValueChange={onFunnelFilterChange}>
+                            <SelectTrigger className="w-auto min-w-[140px] max-w-[220px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
+                                <div className="flex items-center gap-2 text-muted-foreground w-full min-w-0">
+                                    <Layers className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="font-medium text-foreground truncate flex-1 text-left">{funnelFilter === 'Todos' ? 'Todos Funis' : funnelFilter}</span>
                                 </div>
                             </SelectTrigger>
                             <SelectContent align="start" className="rounded-xl">
@@ -220,11 +220,11 @@ export function FilterBar({
                 {/* Regional Filter */}
                 {onRegionalFilterChange && availableRegionals && (
                     <div className="flex items-center gap-2">
-                         <Select value={regionalFilter} onValueChange={onRegionalFilterChange}>
-                            <SelectTrigger className="w-[150px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                    <MapPin className="h-3.5 w-3.5" />
-                                    <span className="font-medium text-foreground truncate">{regionalFilter === 'Todos' ? 'Todas Regionais' : regionalFilter}</span>
+                        <Select value={regionalFilter} onValueChange={onRegionalFilterChange}>
+                            <SelectTrigger className="w-auto min-w-[140px] max-w-[200px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
+                                <div className="flex items-center gap-2 text-muted-foreground w-full min-w-0">
+                                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="font-medium text-foreground truncate flex-1 text-left">{regionalFilter === 'Todos' ? 'Todas Regionais' : regionalFilter}</span>
                                 </div>
                             </SelectTrigger>
                             <SelectContent align="start" className="rounded-xl">
@@ -250,8 +250,8 @@ export function FilterBar({
                     </div>
                 )}
 
-                 {/* UF Filter - Only if Regional is specific or needed */}
-                 {ufFilter && onUfFilterChange && availableUfs && (
+                {/* UF Filter - Only if Regional is specific or needed */}
+                {ufFilter && onUfFilterChange && availableUfs && (
                     <div className="flex items-center gap-2">
                         <Select value={ufFilter} onValueChange={onUfFilterChange}>
                             <SelectTrigger className="w-[100px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
@@ -273,9 +273,9 @@ export function FilterBar({
 
             {/* Actions */}
             <div className="flex items-center gap-2 pl-4 border-l border-border/50">
-                 <div className="bg-muted/30 px-3 py-1.5 rounded-md border border-border/30 text-xs font-medium text-muted-foreground hidden xl:block">
-                     {activePreset === 'custom' ? getDateRangeLabel() : activePreset === 'mesAtual' ? 'Este Mês' : activePreset === 'ultimos7' ? 'Últimos 7 dias' : 'Hoje'}
-                 </div>
+                <div className="bg-muted/30 px-3 py-1.5 rounded-md border border-border/30 text-xs font-medium text-muted-foreground hidden xl:block">
+                    {activePreset === 'custom' ? getDateRangeLabel() : activePreset === 'mesAtual' ? 'Este Mês' : activePreset === 'ultimos7' ? 'Últimos 7 dias' : 'Hoje'}
+                </div>
                 <Button
                     variant="ghost"
                     size="sm"
