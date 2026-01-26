@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useDashboardData } from './useDashboardData';
 import { useDashboardMetrics } from './useDashboardMetrics';
-import { DateFilter, RawLead, RawDeal, DashboardMetrics } from '@/types/dashboard';
+import { DateFilter, RawLead, RawDeal } from '@/types/dashboard';
 import { CRMLead, CRMDeal } from '@/types/crm';
 
 /**

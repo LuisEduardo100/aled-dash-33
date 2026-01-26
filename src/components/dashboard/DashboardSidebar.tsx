@@ -14,6 +14,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   useSidebar,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 
 const menuItems = [
@@ -21,6 +22,7 @@ const menuItems = [
   { title: 'Geração de Demanda', url: '/demand-generation', icon: BarChart4 },
   { title: 'Performance Vendas', url: '/sales-performance', icon: Trophy },
   { title: 'Lista de Leads Avançada', url: '/advanced-leads', icon: Users },
+  { title: 'Relatório de Conversão', url: '/lead-conversion', icon: BarChart4 },
 ];
 
 export function DashboardSidebar() {
@@ -31,16 +33,19 @@ export function DashboardSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
       <SidebarHeader className="p-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white">
-            <img src="/aled_atacadaoled_logo.jfif" alt="Aled Logo" className="w-full h-full object-cover" />
-          </div>
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-foreground leading-tight">Dashboard Aled</span>
-              <span className="text-[10px] text-muted-foreground">Dados do CRM Bitrix24</span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white shrink-0">
+              <img src="/aled_atacadaoled_logo.jfif" alt="Aled Logo" className="w-full h-full object-cover" />
             </div>
-          )}
+            {!isCollapsed && (
+              <div className="flex flex-col fade-in animate-in duration-300">
+                <span className="font-semibold text-foreground leading-tight truncate">Dashboard Aled</span>
+                <span className="text-[10px] text-muted-foreground truncate">Dados do CRM Bitrix24</span>
+              </div>
+            )}
+          </div>
+          <SidebarTrigger className="hidden md:flex" />
         </div>
       </SidebarHeader>
 
@@ -70,22 +75,22 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-  <SidebarFooter className="border-t border-border p-4">
-    <SidebarMenu>
-      <SidebarMenuItem>
-         <SidebarMenuButton 
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="w-full flex items-center justify-between"
-          >
-           <div className="flex items-center gap-2">
-              {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-              <span>{theme === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</span>
-           </div>
-           <Switch checked={theme === 'dark'} onCheckedChange={(c) => setTheme(c ? 'dark' : 'light')} />
-         </SidebarMenuButton>
-      </SidebarMenuItem>
-    </SidebarMenu>
-  </SidebarFooter>
-</Sidebar>
+      <SidebarFooter className="border-t border-border p-4">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="w-full flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                <span>{theme === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</span>
+              </div>
+              <Switch checked={theme === 'dark'} onCheckedChange={(c) => setTheme(c ? 'dark' : 'light')} />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

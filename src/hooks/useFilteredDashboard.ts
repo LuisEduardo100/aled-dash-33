@@ -41,9 +41,24 @@ const isDateInRange = (dateStr: string | undefined, filter: DateFilter): boolean
 
 /**
  * Filter leads by source
+ * Special handling for 'Meta' which combines Facebook + Instagram
  */
+const META_SOURCES = ['Facebook', 'Instagram', 'CALLBACK', 'UC_HCJB1D'];
+
 const filterBySource = <T extends { fonte: string }>(items: T[], source: string | null): T[] => {
     if (!source || source === 'Todos') return items;
+
+    // Special: Meta combines Facebook + Instagram
+    if (source === 'Meta') {
+        return items.filter(item => {
+            const normalized = (item.fonte || '').toLowerCase();
+            return normalized.includes('facebook') ||
+                normalized.includes('instagram') ||
+                normalized.includes('meta') ||
+                META_SOURCES.includes(item.fonte);
+        });
+    }
+
     return items.filter(item => item.fonte === source);
 };
 
@@ -268,7 +283,23 @@ const extractUniqueSources = (payload: SegmentedPayload): string[] => {
     gather(payload.deals?.por_status?.perdidos);
     gather(payload.deals?.por_status?.andamento);
 
-    return ['Todos', ...Array.from(sources).sort()];
+    // Build result with Meta as a special combined option
+    const uniqueSources = Array.from(sources).sort();
+
+    // Check if Facebook or Instagram exists to add Meta option
+    const hasMeta = uniqueSources.some(s =>
+        s.toLowerCase().includes('facebook') ||
+        s.toLowerCase().includes('instagram') ||
+        s === 'CALLBACK' || s === 'UC_HCJB1D'
+    );
+
+    const result = ['Todos'];
+    if (hasMeta) {
+        result.push('Meta'); // Add Meta as combined option
+    }
+    result.push(...uniqueSources);
+
+    return result;
 };
 
 const extractUniqueUfs = (payload: SegmentedPayload): string[] => {
@@ -339,15 +370,15 @@ export const useFilteredDashboard = (
 
         try {
             let data;
-            
+
             if (API_CONFIG.USE_MOCK_DATA) {
                 console.log('Using Mock Data for Dashboard');
                 // Simulate network delay
                 await new Promise(resolve => setTimeout(resolve, 800));
-                
+
                 // Import mock data dynamically or use imported
                 const { mockLeads, mockDeals } = await import('@/data/mockData');
-                
+
                 // Segment Mock Deals logic
                 const mockGanhos = mockDeals.filter(d => d.stage_id?.includes('WON'));
                 const mockPerdidos = mockDeals.filter(d => d.stage_id?.includes('LOSE') || d.stage_id?.includes('LOST'));
@@ -524,7 +555,7 @@ export const useFilteredDashboard = (
         let allowedDealIds: Set<string> | null = null;
         if (funnelFilter && funnelFilter !== 'Todos') {
             allowedDealIds = new Set<string>();
-            
+
             const gatherIds = (list: SegmentedDeal[]) => list.forEach(d => {
                 // Loose comparison to catch whitespace or case issues
                 if (d.funil && d.funil.trim() === funnelFilter.trim()) {
@@ -538,7 +569,7 @@ export const useFilteredDashboard = (
                 gatherIds(rawPayload.deals.por_status.andamento);
             }
         }
-        
+
         // Filter leads
 
         const filteredLeads = {
@@ -811,7 +842,7 @@ export const useFilteredDashboard = (
                 ];
 
                 const normalize = (s: string) => (s || '').toLowerCase();
-                
+
                 const allDeals = [
                     ...filteredDealsByStatusFiltered.ganhos,
                     ...filteredDealsByStatusFiltered.perdidos,
@@ -821,7 +852,7 @@ export const useFilteredDashboard = (
                 allDeals.forEach(d => {
                     const val = parseValue(d.valor);
                     const src = normalize(d.fonte);
-                    
+
                     // Helper to add to channel
                     const addTo = (name: string) => {
                         const item = results.find(r => r.name === name);
@@ -839,7 +870,7 @@ export const useFilteredDashboard = (
                     else if (src.includes('profissional')) addTo('Indicação Profissional');
                     else if (src.includes('ltv')) addTo('LTV');
                     else if (src.includes('indicação amigo') || src.includes('indicacao amigo')) addTo('Indicação Amigo');
-                    
+
                     // Novos Leads Check
                     if (d.is_novo) {
                         addTo('Novos Leads/Clientes');
@@ -860,7 +891,7 @@ export const useFilteredDashboard = (
                 const revenue = newDeals
                     .filter(d => d.status_nome?.toLowerCase().includes('ganho') || d.status_nome?.toLowerCase().includes('won'))
                     .reduce((acc, d) => acc + parseValue(d.valor), 0);
-                
+
                 return {
                     count: newDeals.length,
                     revenue

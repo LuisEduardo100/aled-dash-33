@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import AdvancedLeadsPage from "./pages/AdvancedLeadsPage";
 import DemandGenerationPage from "./pages/DemandGenerationPage";
 import SalesPerformancePage from "./pages/SalesPerformancePage";
+import LeadConversionReport from "./pages/LeadConversionReport";
 import NotFound from "./pages/NotFound";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/demand-generation" element={<DemandGenerationPage />} />
             <Route path="/advanced-leads" element={<AdvancedLeadsPage />} />
             <Route path="/sales-performance" element={<SalesPerformancePage />} />
+            <Route path="/lead-conversion" element={<LeadConversionReport />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

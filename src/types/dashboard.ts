@@ -1,5 +1,13 @@
 // Types for the new segmented payload from backend (n8n + Postgres)
 
+// Phone entry from Bitrix PHONE array
+export interface PhoneEntry {
+    ID?: string;
+    VALUE_TYPE?: string;
+    VALUE?: string;
+    TYPE_ID?: string;
+}
+
 // ========== LEAD OBJECT ==========
 export interface SegmentedLead {
     id: string;
@@ -10,6 +18,7 @@ export interface SegmentedLead {
     regional?: string; // New: Regional filter (e.g., "Regional CE")
     motivo_descarte?: string; // Display in Descartados table
     telefone?: string;
+    PHONE?: PhoneEntry[]; // Bitrix phone array
     responsavel_nome: string; // Pre-treated, display directly
     criador_nome: string;
     link_bitrix: string;
@@ -29,6 +38,7 @@ export interface SegmentedDeal {
     regional?: string; // New: Regional filter
     uf?: string; // For map
     cidade?: string;
+    telefone?: string; // For contact-based traceability
     funil?: string; // Pipeline/Funnel name (e.g., "Varejo", "Projeto")
     status_nome: string; // "Ganho", "Perdido", "Em Andamento" - display directly
     motivo_perda?: string; // New: For Lost Deals analysis
@@ -37,9 +47,11 @@ export interface SegmentedDeal {
     is_novo: boolean;
     link_bitrix: string;
     link_kinbox?: string;
+    id_lead?: string; // New: Lead ID for conversion analysis
     data_criacao: string; // For Pipeline/Andamento filter
     data_fechamento?: string; // For Ganhos/Perdidos filter
 }
+
 
 // ========== DEALS BY STATUS ==========
 export interface DealsByStatus {
@@ -144,14 +156,14 @@ export interface FilteredDashboardData {
     discardReasons: { name: string; value: number }[];
     dealLossReasons: { name: string; value: number }[]; // New: Reasons for lost deals
     monthlyGoal: MonthlyGoalMetrics; // New: Goal section data
-    
+
     // New: Goal/Performance Chart Data
-    channelPerformance: { 
-        name: string; 
-        revenue: number; 
-        opportunities: number; 
-        revenueTarget: number; 
-        oppsTarget: number; 
+    channelPerformance: {
+        name: string;
+        revenue: number;
+        opportunities: number;
+        revenueTarget: number;
+        oppsTarget: number;
     }[];
 
     // New: Novos Leads Logic
@@ -210,9 +222,11 @@ export interface RawDeal {
     is_ganho: boolean;
     link_bitrix: string;
     link_kinbox?: string;
+    id_lead?: string;
     data_criacao: string;
     data_fechamento?: string;
 }
+
 
 export interface DashboardPayload {
     leads: RawLead[];

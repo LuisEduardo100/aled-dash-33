@@ -23,9 +23,10 @@ export const useDashboardData = (
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
+    const fetchData = useCallback(async (isAutoRefresh = false) => {
+        if (!isAutoRefresh) setIsLoading(true);
+        // Don't clear error on auto-refresh to avoid flickering if it fails silently
+        if (!isAutoRefresh) setError(null);
 
         try {
             // Build query string with filters
@@ -65,14 +66,22 @@ export const useDashboardData = (
             }
         } catch (err) {
             console.error('Dashboard fetch error:', err);
-            setError(err instanceof Error ? err.message : 'Failed to fetch data');
+            if (!isAutoRefresh) setError(err instanceof Error ? err.message : 'Failed to fetch data');
         } finally {
-            setIsLoading(false);
+            if (!isAutoRefresh) setIsLoading(false);
         }
     }, [scope, dateFilter]);
 
     useEffect(() => {
         fetchData();
+
+        // Auto-refresh every 1 hour (3600000 ms)
+        const intervalId = setInterval(() => {
+            console.log('Auto-refreshing dashboard data...');
+            fetchData(true);
+        }, 3600000);
+
+        return () => clearInterval(intervalId);
     }, [fetchData]);
 
     return {
@@ -80,8 +89,9 @@ export const useDashboardData = (
         deals,
         isLoading,
         error,
-        refetch: fetchData,
+        refetch: () => fetchData(false),
     };
 };
+
 
 export default useDashboardData;
