@@ -43,7 +43,7 @@ export function GoalComparisonChart({ data }: GoalComparisonChartProps) {
     <Card className="col-span-2">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-base font-normal">
-          Meta vs Realizado por Canal e Novos Clientes
+          Meta vs Realizado por Canal
         </CardTitle>
         <div className="flex items-center space-x-2">
           <Label htmlFor="view-mode" className="text-sm text-muted-foreground">

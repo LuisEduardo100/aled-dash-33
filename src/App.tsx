@@ -8,6 +8,8 @@ import AdvancedLeadsPage from "./pages/AdvancedLeadsPage";
 import DemandGenerationPage from "./pages/DemandGenerationPage";
 import SalesPerformancePage from "./pages/SalesPerformancePage";
 import LeadConversionReport from "./pages/LeadConversionReport";
+import LeadsDashboard from "./pages/LeadsDashboard";
+import DealsDashboard from "./pages/DealsDashboard";
 import NotFound from "./pages/NotFound";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -22,6 +24,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/leads-dashboard" element={<LeadsDashboard />} />
+            <Route path="/deals-dashboard" element={<DealsDashboard />} />
             <Route path="/demand-generation" element={<DemandGenerationPage />} />
             <Route path="/advanced-leads" element={<AdvancedLeadsPage />} />
             <Route path="/sales-performance" element={<SalesPerformancePage />} />
@@ -36,3 +40,4 @@ const App = () => (
 );
 
 export default App;
+

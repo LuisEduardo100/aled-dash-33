@@ -7,11 +7,12 @@ import { useFilteredDashboard } from '@/hooks/useFilteredDashboard';
 import { DateFilter, SegmentedDeal } from '@/types/dashboard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Link2, Link2Off, Wallet, Loader2, User, ArrowRight, CheckCircle2, HelpCircle, TrendingUp, DollarSign, Users, ChevronLeft, ChevronRight, ExternalLink, Tag } from 'lucide-react';
+import { Link2, Link2Off, Wallet, Loader2, User, ArrowRight, CheckCircle2, HelpCircle, TrendingUp, DollarSign, Users, ChevronLeft, ChevronRight, ExternalLink, Tag, Search, ArrowUpDown } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { bitrixService, BitrixLead } from '@/services/bitrixService';
 import { getFriendlySourceName } from '@/utils/sourceMapping';
+import { LeadToCloseTimeChart } from '@/components/dashboard/LeadToCloseTimeChart';
 
 export default function LeadConversionReport() {
     const [dateFilter, setDateFilter] = useState<DateFilter>({
@@ -20,6 +21,8 @@ export default function LeadConversionReport() {
     });
     const [sourceFilter, setSourceFilter] = useState('Todos');
     const [ufFilter, setUfFilter] = useState('Todos');
+    const [timeRangeModalData, setTimeRangeModalData] = useState<{ range: string; deals: SegmentedDeal[] } | null>(null);
+    const [selectedAuditDeal, setSelectedAuditDeal] = useState<{ deal: SegmentedDeal; type: 'fastest' | 'slowest' } | null>(null);
 
     const {
         leads,
@@ -251,6 +254,124 @@ export default function LeadConversionReport() {
                         </CardContent>
                     </Card>
 
+                    {/* ========== LEAD TO CLOSE TIME CHART ========== */}
+                    <LeadToCloseTimeChart 
+                        deals={allDeals} 
+                        onBarClick={(range, rangeDeals) => {
+                            // Open a modal or sheet with the deals from this time range
+                            setTimeRangeModalData({ range, deals: rangeDeals });
+                        }}
+                        onDealClick={(deal, type) => {
+                            setSelectedAuditDeal({ deal, type });
+                        }}
+                    />
+
+                    {/* Single Deal Audit Modal */}
+                    {selectedAuditDeal && (
+                        <Sheet open={!!selectedAuditDeal} onOpenChange={(open) => !open && setSelectedAuditDeal(null)}>
+                            <SheetContent className="sm:max-w-[540px] overflow-y-auto">
+                                <SheetHeader className="mb-4">
+                                    <SheetTitle className="flex items-center gap-2">
+                                        {selectedAuditDeal.type === 'fastest' ? (
+                                            <span className="text-emerald-500">⚡ Negócio Mais Rápido</span>
+                                        ) : (
+                                            <span className="text-amber-500">🐢 Negócio Mais Lento</span>
+                                        )}
+                                    </SheetTitle>
+                                    <SheetDescription>
+                                        Auditoria de tempo de fechamento
+                                    </SheetDescription>
+                                </SheetHeader>
+                                
+                                <div className="space-y-4">
+                                    {/* Deal Title */}
+                                    <div className="p-4 rounded-lg bg-muted/30 border">
+                                        <div className="text-sm text-muted-foreground">Título do Negócio</div>
+                                        <div className="text-lg font-semibold">{selectedAuditDeal.deal.titulo}</div>
+                                    </div>
+                                    
+                                    {/* Value */}
+                                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                        <div className="text-sm text-muted-foreground">Valor</div>
+                                        <div className="text-2xl font-bold text-emerald-500">
+                                            {formatCurrency(Number(selectedAuditDeal.deal.valor))}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Timeline */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-4 rounded-lg bg-muted/30 border">
+                                            <div className="text-sm text-muted-foreground">Data Criação</div>
+                                            <div className="font-medium">
+                                                {format(new Date(selectedAuditDeal.deal.data_criacao), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                            </div>
+                                        </div>
+                                        <div className="p-4 rounded-lg bg-muted/30 border">
+                                            <div className="text-sm text-muted-foreground">Data Fechamento</div>
+                                            <div className="font-medium">
+                                                {selectedAuditDeal.deal.data_fechamento 
+                                                    ? format(new Date(selectedAuditDeal.deal.data_fechamento), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+                                                    : 'N/A'
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Other Info */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-4 rounded-lg bg-muted/30 border">
+                                            <div className="text-sm text-muted-foreground">Fonte</div>
+                                            <div className="font-medium">{selectedAuditDeal.deal.fonte}</div>
+                                        </div>
+                                        <div className="p-4 rounded-lg bg-muted/30 border">
+                                            <div className="text-sm text-muted-foreground">Responsável</div>
+                                            <div className="font-medium">{selectedAuditDeal.deal.responsavel_nome}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-4 rounded-lg bg-muted/30 border">
+                                            <div className="text-sm text-muted-foreground">ID do Negócio</div>
+                                            <div className="font-mono text-sm">{selectedAuditDeal.deal.id}</div>
+                                        </div>
+                                        <div className="p-4 rounded-lg bg-muted/30 border">
+                                            <div className="text-sm text-muted-foreground">ID do Lead</div>
+                                            <div className="font-mono text-sm">{selectedAuditDeal.deal.id_lead || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Bitrix Link */}
+                                    {selectedAuditDeal.deal.link_bitrix && (
+                                        <a 
+                                            href={selectedAuditDeal.deal.link_bitrix}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-center gap-2 w-full p-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                                        >
+                                            <ExternalLink className="h-4 w-4" />
+                                            Abrir no Bitrix
+                                        </a>
+                                    )}
+                                </div>
+                            </SheetContent>
+                        </Sheet>
+                    )}
+
+                    {/* Time Range Deals Modal */}
+                    {timeRangeModalData && (
+                        <Sheet open={!!timeRangeModalData} onOpenChange={(open) => !open && setTimeRangeModalData(null)}>
+                            <SheetContent className="sm:max-w-[700px] overflow-y-auto">
+                                <SheetHeader className="mb-4">
+                                    <SheetTitle>Negócios Fechados: {timeRangeModalData.range}</SheetTitle>
+                                    <SheetDescription>
+                                        {timeRangeModalData.deals.length} negócios fecharam neste período
+                                    </SheetDescription>
+                                </SheetHeader>
+                                <DealList deals={timeRangeModalData.deals} showTimeline />
+                            </SheetContent>
+                        </Sheet>
+                    )}
+
                     {/* ========== TRACEABILITY CARDS ========== */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card>
@@ -421,19 +542,97 @@ export default function LeadConversionReport() {
     );
 }
 
-// ========== DEAL LIST WITH PAGINATION ==========
+// ========== DEAL LIST WITH PAGINATION, SEARCH, AND SORTABLE HEADERS ==========
 const ITEMS_PER_PAGE = 10;
+
+type SortKey = 'titulo' | 'valor' | 'fonte' | 'status_nome' | 'data_criacao' | 'id_lead';
+type SortDirection = 'asc' | 'desc';
 
 function DealList({ deals, showTimeline = false }: { deals: SegmentedDeal[], showTimeline?: boolean }) {
     const [selectedDeal, setSelectedDeal] = useState<SegmentedDeal | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'data_criacao', direction: 'desc' });
 
-    const totalPages = Math.ceil(deals.length / ITEMS_PER_PAGE);
+    // Filter by search
+    const filteredDeals = useMemo(() => {
+        if (!searchQuery.trim()) return deals;
+        const query = searchQuery.toLowerCase();
+        return deals.filter(deal =>
+            deal.titulo?.toLowerCase().includes(query) ||
+            deal.id?.toString().includes(query) ||
+            deal.id_lead?.toString().includes(query) ||
+            deal.fonte?.toLowerCase().includes(query)
+        );
+    }, [deals, searchQuery]);
+
+    // Sort deals
+    const sortedDeals = useMemo(() => {
+        const sorted = [...filteredDeals];
+        sorted.sort((a, b) => {
+            let valA: any = a[sortConfig.key];
+            let valB: any = b[sortConfig.key];
+
+            // Handle dates
+            if (sortConfig.key === 'data_criacao') {
+                valA = new Date(valA || 0).getTime();
+                valB = new Date(valB || 0).getTime();
+            }
+
+            // Handle numbers
+            if (sortConfig.key === 'valor') {
+                valA = Number(valA) || 0;
+                valB = Number(valB) || 0;
+            }
+
+            // Handle nulls
+            if (valA === null || valA === undefined) return 1;
+            if (valB === null || valB === undefined) return -1;
+
+            // String comparison
+            if (typeof valA === 'string' && typeof valB === 'string') {
+                valA = valA.toLowerCase();
+                valB = valB.toLowerCase();
+            }
+
+            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return sorted;
+    }, [filteredDeals, sortConfig]);
+
+    const totalPages = Math.ceil(sortedDeals.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    const paginatedDeals = deals.slice(startIndex, endIndex);
+    const paginatedDeals = sortedDeals.slice(startIndex, endIndex);
 
     const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+    const handleSort = (key: SortKey) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+        }));
+        setCurrentPage(1);
+    };
+
+    const SortableHeader = ({ label, sortKey, className = '' }: { label: string; sortKey: SortKey; className?: string }) => (
+        <th
+            className={`h-12 px-4 align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground group ${className}`}
+            onClick={() => handleSort(sortKey)}
+        >
+            <div className="flex items-center gap-1">
+                {label}
+                <ArrowUpDown className={`h-3 w-3 transition-opacity ${sortConfig.key === sortKey ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-50'}`} />
+            </div>
+        </th>
+    );
+
+    // Reset page when search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery]);
 
     if (deals.length === 0) return (
         <Card>
@@ -446,10 +645,23 @@ function DealList({ deals, showTimeline = false }: { deals: SegmentedDeal[], sho
     return (
         <>
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Listagem de Negócios</CardTitle>
-                    <div className="text-sm text-muted-foreground">
-                        Exibindo <span className="font-bold text-foreground">{startIndex + 1}-{Math.min(endIndex, deals.length)}</span> de <span className="font-bold text-foreground">{deals.length}</span>
+                <CardHeader className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <CardTitle>Listagem de Negócios</CardTitle>
+                        <div className="text-sm text-muted-foreground">
+                            Exibindo <span className="font-bold text-foreground">{startIndex + 1}-{Math.min(endIndex, sortedDeals.length)}</span> de <span className="font-bold text-foreground">{sortedDeals.length}</span>
+                        </div>
+                    </div>
+                    {/* Search Bar */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nome, ID ou fonte..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -458,12 +670,12 @@ function DealList({ deals, showTimeline = false }: { deals: SegmentedDeal[], sho
                             <thead className="[&_tr]:border-b">
                                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-8">#</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Título</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Valor</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Fonte</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Status</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Data Criação</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">ID Lead</th>
+                                    <SortableHeader label="Título" sortKey="titulo" />
+                                    <SortableHeader label="Valor" sortKey="valor" />
+                                    <SortableHeader label="Fonte" sortKey="fonte" />
+                                    <SortableHeader label="Status" sortKey="status_nome" />
+                                    <SortableHeader label="Data Criação" sortKey="data_criacao" />
+                                    <SortableHeader label="ID Lead" sortKey="id_lead" />
                                     {showTimeline && <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Ações</th>}
                                 </tr>
                             </thead>

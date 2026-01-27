@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart4, Sun, Moon, Trophy } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart4, Sun, Moon, Trophy, DollarSign } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/components/ThemeProvider';
@@ -18,7 +18,9 @@ import {
 } from '@/components/ui/sidebar';
 
 const menuItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+  { title: 'Dashboard Geral', url: '/', icon: LayoutDashboard },
+  { title: 'Dashboard de Leads', url: '/leads-dashboard', icon: Users },
+  { title: 'Dashboard de Negócios', url: '/deals-dashboard', icon: DollarSign },
   { title: 'Geração de Demanda', url: '/demand-generation', icon: BarChart4 },
   { title: 'Performance Vendas', url: '/sales-performance', icon: Trophy },
   { title: 'Lista de Leads Avançada', url: '/advanced-leads', icon: Users },

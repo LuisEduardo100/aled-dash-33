@@ -124,8 +124,8 @@ const DemandGenerationPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* NEW: Goal Comparison & Novos Leads Section */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                    {/* Goal Comparison Section */}
+                    <div className="mb-6">
                         <GoalComparisonChart data={(() => {
                             if (!channelPerformance) return [];
                             return channelPerformance.map(item => {
@@ -135,7 +135,6 @@ const DemandGenerationPage: React.FC = () => {
                                 else if (item.name === 'Indicação Profissional') key = 'indicacaoProfissional';
                                 else if (item.name === 'LTV') key = 'ltv';
                                 else if (item.name === 'Indicação Amigo') key = 'indicacaoAmigo';
-                                else if (item.name === 'Novos Leads/Clientes') key = 'novosLeads';
 
                                 if (key && goals) {
                                     return {
@@ -147,32 +146,6 @@ const DemandGenerationPage: React.FC = () => {
                                 return item;
                             });
                         })()} />
-                        
-                        {/* Novos Leads KPI Card */}
-                         <div className="lg:col-span-1 space-y-4">
-                            <div className="bg-card text-card-foreground rounded-xl border shadow-sm p-6">
-                                <div className="flex flex-col space-y-1.5 p-0">
-                                    <h3 className="font-semibold leading-none tracking-tight text-emerald-500">Novos Clientes (Ganhos)</h3>
-                                    <p className="text-sm text-muted-foreground">Performance acumulada</p>
-                                </div>
-                                <div className="p-0 pt-4 content-center">
-                                    <div className="text-3xl font-bold">
-                                        {novosLeadsMetrics ? novosLeadsMetrics.count : 0}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Negócios fechados
-                                    </p>
-                                    <div className="mt-4 pt-4 border-t">
-                                        <div className="text-2xl font-bold text-emerald-600">
-                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(novosLeadsMetrics?.revenue || 0)}
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Receita gerada
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Second Charts Row */}

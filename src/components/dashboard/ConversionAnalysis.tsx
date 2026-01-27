@@ -192,16 +192,6 @@ export function ConversionAnalysis({
             </div>
           ))}
         </div>
-
-        {/* Deep Dive Breakdowns (Google & Meta) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border/50">
-          {(googleCount > 0 || googleConvertedVarejo.length > 0 || googleConvertedProjeto.length > 0) &&
-            renderBreakdownPie('Google Ads', googleBreakdown)
-          }
-          {(metaCount > 0 || metaConvertedVarejo.length > 0 || metaConvertedProjeto.length > 0) &&
-            renderBreakdownPie('Meta Ads', metaBreakdown)
-          }
-        </div>
       </CardContent>
     </Card>
   );
