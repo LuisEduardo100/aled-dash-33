@@ -28,8 +28,8 @@ export default function AdvancedLeadsPage() {
         error,
         refetch
     } = useFilteredDashboard(
-        dateFilter, 
-        sourceFilter === 'Todos' ? null : sourceFilter, 
+        dateFilter,
+        sourceFilter === 'Todos' ? null : sourceFilter,
         ufFilter === 'Todos' ? null : ufFilter,
         regionalFilter === 'Todos' ? null : regionalFilter
     );
@@ -55,6 +55,7 @@ export default function AdvancedLeadsPage() {
                     availableRegionals={availableRegionals || ['Todos']}
                     onRefresh={refetch}
                     isLoading={isLoading}
+                    isSyncing={isSyncing}
                 />
             </div>
 

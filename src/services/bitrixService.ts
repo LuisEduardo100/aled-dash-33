@@ -66,74 +66,108 @@ export const bitrixService = {
 
     /**
      * Search for a lead by phone number
-     * Uses crm.lead.list with PHONE filter and returns only necessary fields
+     * Uses crm.lead.list with PHONE filter and multiple fallback strategies
      */
     searchLeadByPhone: async (phone: string): Promise<BitrixLead | null> => {
         try {
             const normalizedPhone = normalizePhone(phone);
-            if (normalizedPhone.length < 10) {
-                console.warn('Invalid phone number for search:', phone);
+            if (normalizedPhone.length < 8) {
                 return null;
             }
 
-            // Build the API URL with filter and select parameters
-            // Filter by PHONE field, select only needed fields
-            const params = new URLSearchParams();
-            params.append('filter[PHONE]', phone);
-            params.append('select[]', 'ID');
-            params.append('select[]', 'TITLE');
-            params.append('select[]', 'DATE_CREATE');
-            params.append('select[]', 'STATUS_ID');
-            params.append('select[]', 'SOURCE_ID');
-            params.append('select[]', 'ASSIGNED_BY_ID');
-            params.append('select[]', 'PHONE');
-            params.append('select[]', 'UF_CRM_1763496046795');
-            params.append('order[DATE_CREATE]', 'DESC'); // Get most recent first
-            params.append('start', '0');
+            // Last 8 and 9 digits for partial matching
+            const last8 = normalizedPhone.slice(-8);
+            const last9 = normalizedPhone.slice(-9);
 
-            const response = await fetch(`${BITRIX_WEBHOOK_URL}/crm.lead.list?${params.toString()}`);
+            // FIELDS TO SELECT
+            const selectFields = [
+                'ID', 'TITLE', 'DATE_CREATE', 'STATUS_ID', 'SOURCE_ID',
+                'ASSIGNED_BY_ID', 'PHONE', 'UF_CRM_1763496046795'
+            ];
 
-            if (!response.ok) {
-                throw new Error(`Bitrix API error: ${response.status}`);
-            }
+            const trySearch = async (filterKey: string, filterValue: string): Promise<BitrixLead | null> => {
+                const params = new URLSearchParams();
+                params.append(`filter[${filterKey}]`, filterValue);
+                selectFields.forEach(f => params.append('select[]', f));
+                params.append('order[DATE_CREATE]', 'DESC');
 
-            const data = await response.json();
-
-            if (data.result && Array.isArray(data.result) && data.result.length > 0) {
-                // Return the first (most recent) matching lead
-                return data.result[0] as BitrixLead;
-            }
-
-            // If no results with exact match, try with normalized phone
-            // Sometimes Bitrix stores with country code, sometimes without
-            const altParams = new URLSearchParams();
-            altParams.append('filter[PHONE]', normalizedPhone);
-            altParams.append('select[]', 'ID');
-            altParams.append('select[]', 'TITLE');
-            altParams.append('select[]', 'DATE_CREATE');
-            altParams.append('select[]', 'STATUS_ID');
-            altParams.append('select[]', 'SOURCE_ID');
-            altParams.append('select[]', 'ASSIGNED_BY_ID');
-            altParams.append('select[]', 'PHONE');
-            altParams.append('select[]', 'UF_CRM_1763496046795');
-            altParams.append('order[DATE_CREATE]', 'DESC');
-            altParams.append('start', '0');
-
-            const altResponse = await fetch(`${BITRIX_WEBHOOK_URL}/crm.lead.list?${params.toString()}`);
-
-            if (!altResponse.ok) {
+                const res = await fetch(`${BITRIX_WEBHOOK_URL}/crm.lead.list?${params.toString()}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.result && data.result.length > 0) return data.result[0];
+                }
                 return null;
+            };
+
+            // Strategy 1: Exact PHONE match with original value
+            let result = await trySearch('PHONE', phone);
+            if (result) return result;
+
+            // Strategy 2: Exact PHONE match with normalized value
+            if (normalizedPhone !== phone) {
+                result = await trySearch('PHONE', normalizedPhone);
+                if (result) return result;
             }
 
-            const altData = await altResponse.json();
+            // Strategy 3: PHONE match with %LIKE% pattern (contains)
+            result = await trySearch('%PHONE', `%${last8}%`);
+            if (result) return result;
 
-            if (altData.result && Array.isArray(altData.result) && altData.result.length > 0) {
-                return altData.result[0] as BitrixLead;
+            // Strategy 4: Custom field exact match
+            result = await trySearch('UF_CRM_1763496046795', phone);
+            if (result) return result;
+
+            // Strategy 5: Custom field with normalized value
+            if (normalizedPhone !== phone) {
+                result = await trySearch('UF_CRM_1763496046795', normalizedPhone);
+                if (result) return result;
             }
+
+            // Strategy 6: Custom field LIKE match
+            result = await trySearch('%UF_CRM_1763496046795', `%${last8}%`);
+            if (result) return result;
+
+            // Strategy 7: Try last 9 digits on custom field
+            result = await trySearch('%UF_CRM_1763496046795', `%${last9}%`);
+            if (result) return result;
 
             return null;
         } catch (error) {
             console.error('Error searching Bitrix lead by phone:', error);
+            return null;
+        }
+    },
+
+    getDeal: async (dealId: string): Promise<any | null> => {
+        try {
+            const url = `${BITRIX_WEBHOOK_URL}/crm.deal.get?ID=${dealId}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.result) return data.result;
+            return null;
+        } catch (error) {
+            console.error('[Bitrix] Error fetching deal:', error);
+            return null;
+        }
+    },
+
+    searchDealByTitle: async (title: string): Promise<any | null> => {
+        try {
+            const params = new URLSearchParams();
+            params.append('filter[TITLE]', title);
+            // Select all fields (*) to find the custom one
+            params.append('select[]', '*');
+            params.append('select[]', 'UF_*'); // Try to select user fields
+
+            const response = await fetch(`${BITRIX_WEBHOOK_URL}/crm.deal.list?${params.toString()}`);
+            const data = await response.json();
+
+            if (data.result && data.result.length > 0) {
+                return data.result[0];
+            }
+            return null;
+        } catch (error) {
+            console.error('[Bitrix] Error searching deal:', error);
             return null;
         }
     }

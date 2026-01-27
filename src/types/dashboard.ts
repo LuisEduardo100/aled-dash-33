@@ -19,6 +19,7 @@ export interface SegmentedLead {
     motivo_descarte?: string; // Display in Descartados table
     telefone?: string;
     PHONE?: PhoneEntry[]; // Bitrix phone array
+    UF_CRM_1763496046795?: string; // Custom phone field for lead matching
     responsavel_nome: string; // Pre-treated, display directly
     criador_nome: string;
     link_bitrix: string;
@@ -39,6 +40,7 @@ export interface SegmentedDeal {
     uf?: string; // For map
     cidade?: string;
     telefone?: string; // For contact-based traceability
+    UF_CRM_1731350457664?: string; // Custom phone field ([ALED] Contato do Cliente)
     funil?: string; // Pipeline/Funnel name (e.g., "Varejo", "Projeto")
     status_nome: string; // "Ganho", "Perdido", "Em Andamento" - display directly
     motivo_perda?: string; // New: For Lost Deals analysis

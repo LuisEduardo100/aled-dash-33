@@ -18,8 +18,7 @@ import {
 } from '@/components/ui/sidebar';
 
 const menuItems = [
-  { title: 'Dashboard Geral', url: '/', icon: LayoutDashboard },
-  { title: 'Dashboard de Leads', url: '/leads-dashboard', icon: Users },
+  { title: 'Dashboard de Leads', url: '/', icon: Users },
   { title: 'Dashboard de Negócios', url: '/deals-dashboard', icon: DollarSign },
   { title: 'Geração de Demanda', url: '/demand-generation', icon: BarChart4 },
   { title: 'Performance Vendas', url: '/sales-performance', icon: Trophy },

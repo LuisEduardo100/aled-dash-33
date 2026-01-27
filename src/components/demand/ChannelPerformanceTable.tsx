@@ -2,6 +2,7 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DemandMetrics, ChannelMetrics } from '@/hooks/useDemandMetrics';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { HoverScrollContainer } from '@/components/dashboard/HoverScrollContainer';
 
 interface ChannelPerformanceTableProps {
     metrics: DemandMetrics;
@@ -29,15 +30,15 @@ const TrendIcon = ({ trend }: { trend: 'up' | 'down' | 'neutral' }) => {
 
 const ProgressBar = ({ percent }: { percent: number }) => {
     const clampedPercent = Math.min(100, Math.max(0, percent));
-    const colorClass = 
+    const colorClass =
         percent >= 80 ? 'bg-emerald-500' :
-        percent >= 50 ? 'bg-blue-500' :
-        percent >= 30 ? 'bg-amber-500' : 'bg-red-500';
+            percent >= 50 ? 'bg-blue-500' :
+                percent >= 30 ? 'bg-amber-500' : 'bg-red-500';
 
     return (
         <div className="flex items-center gap-2 min-w-[120px]">
             <div className="flex-1 bg-secondary h-2 rounded-full overflow-hidden">
-                <div 
+                <div
                     className={`h-full rounded-full ${colorClass} transition-all`}
                     style={{ width: `${clampedPercent}%` }}
                 />
@@ -63,8 +64,8 @@ export const ChannelPerformanceTable: React.FC<ChannelPerformanceTableProps> = (
                     📊 Performance por Canal
                 </h4>
             </div>
-            <div className="overflow-x-auto">
-                <Table>
+            <HoverScrollContainer>
+                <Table className="min-w-[800px]">
                     <TableHeader>
                         <TableRow className="bg-muted/30">
                             <TableHead className="font-semibold">Canal</TableHead>
@@ -81,31 +82,31 @@ export const ChannelPerformanceTable: React.FC<ChannelPerformanceTableProps> = (
                         {metrics.channelMetrics
                             .filter(channel => channel.channel.toLowerCase() !== 'outros')
                             .map(channel => (
-                            <TableRow key={channel.channelKey} className="hover:bg-muted/20">
-                                <TableCell className="font-medium">{channel.channel}</TableCell>
-                                <TableCell className="text-right text-muted-foreground">
-                                    {formatCurrency(channel.faturamentoMeta)}
-                                </TableCell>
-                                <TableCell className="text-right font-medium text-emerald-400">
-                                    {formatCurrency(channel.faturamentoRealizado)}
-                                </TableCell>
-                                <TableCell className="text-right text-muted-foreground">
-                                    {formatCurrency(channel.oportunidadesMeta)}
-                                </TableCell>
-                                <TableCell className="text-right font-medium text-blue-400">
-                                    {formatCurrency(channel.oportunidadesRealizado)}
-                                </TableCell>
-                                <TableCell>
-                                    <ProgressBar percent={channel.percentAtingido} />
-                                </TableCell>
-                                <TableCell className="text-right text-muted-foreground">
-                                    {channel.gap > 0 ? formatCurrency(channel.gap) : '-'}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                    <TrendIcon trend={channel.trend} />
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                                <TableRow key={channel.channelKey} className="hover:bg-muted/20">
+                                    <TableCell className="font-medium">{channel.channel}</TableCell>
+                                    <TableCell className="text-right text-muted-foreground">
+                                        {formatCurrency(channel.faturamentoMeta)}
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium text-emerald-400">
+                                        {formatCurrency(channel.faturamentoRealizado)}
+                                    </TableCell>
+                                    <TableCell className="text-right text-muted-foreground">
+                                        {formatCurrency(channel.oportunidadesMeta)}
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium text-blue-400">
+                                        {formatCurrency(channel.oportunidadesRealizado)}
+                                    </TableCell>
+                                    <TableCell>
+                                        <ProgressBar percent={channel.percentAtingido} />
+                                    </TableCell>
+                                    <TableCell className="text-right text-muted-foreground">
+                                        {channel.gap > 0 ? formatCurrency(channel.gap) : '-'}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <TrendIcon trend={channel.trend} />
+                                    </TableCell>
+                                </TableRow>
+                            ))}
                         {/* Total Row */}
                         <TableRow className="bg-muted/50 font-semibold border-t-2">
                             <TableCell className="font-bold">TOTAL</TableCell>
@@ -121,7 +122,7 @@ export const ChannelPerformanceTable: React.FC<ChannelPerformanceTableProps> = (
                         </TableRow>
                     </TableBody>
                 </Table>
-            </div>
+            </HoverScrollContainer>
         </div>
     );
 };

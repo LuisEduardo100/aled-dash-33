@@ -151,7 +151,7 @@ export default function LeadsDashboard() {
           onRegionalFilterChange={setRegionalFilter}
           availableRegionals={availableRegionals}
           funnelFilter="Todos"
-          onFunnelFilterChange={() => {}}
+          onFunnelFilterChange={() => { }}
           availableFunnels={[]}
           onRefresh={refetch}
           isLoading={isLoading}
@@ -229,6 +229,7 @@ export default function LeadsDashboard() {
               <DiscardReasonChart
                 data={discardReasons}
                 onReasonClick={(reason) => handleReasonClick(reason)}
+                hideToggle={true}
               />
             </>
           )}

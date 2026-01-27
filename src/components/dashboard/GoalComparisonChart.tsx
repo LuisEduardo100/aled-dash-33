@@ -27,17 +27,20 @@ interface GoalComparisonChartProps {
 export function GoalComparisonChart({ data }: GoalComparisonChartProps) {
   const [viewMode, setViewMode] = useState<'opportunities' | 'revenue'>('opportunities');
 
-  const chartData = data.map(item => ({
-    name: item.name,
-    actual: viewMode === 'opportunities' ? item.opportunities : item.revenue,
-    target: viewMode === 'opportunities' ? item.oppsTarget : item.revenueTarget,
-  }));
+  // Filter out "Novos Leads/Clientes" and map to chart format
+  const chartData = data
+    .filter(item => !item.name.toLowerCase().includes('novos'))
+    .map(item => ({
+      name: item.name,
+      actual: viewMode === 'opportunities' ? item.opportunities : item.revenue,
+      target: viewMode === 'opportunities' ? item.oppsTarget : item.revenueTarget,
+    }));
 
-  const formatCurrency = (value: number) => 
+  const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-  const formatValue = (value: number) => 
-    viewMode === 'revenue' ? formatCurrency(value) : formatCurrency(value); 
+  const formatValue = (value: number) =>
+    viewMode === 'revenue' ? formatCurrency(value) : formatCurrency(value);
 
   return (
     <Card className="col-span-2">
@@ -69,22 +72,22 @@ export function GoalComparisonChart({ data }: GoalComparisonChartProps) {
               }}
             >
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
-              <XAxis 
-                dataKey="name" 
+              <XAxis
+                dataKey="name"
                 tickLine={false}
                 axisLine={false}
                 stroke="#888"
                 fontSize={12}
                 interval={0} // Show all labels
               />
-              <YAxis 
-                tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`} 
+              <YAxis
+                tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`}
                 tickLine={false}
                 axisLine={false}
                 stroke="#888"
                 fontSize={12}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                 formatter={(value: number, name: string) => [
                   formatValue(value),
@@ -93,30 +96,30 @@ export function GoalComparisonChart({ data }: GoalComparisonChartProps) {
                 labelStyle={{ color: '#f3f4f6' }}
               />
               <Legend verticalAlign="top" height={36} />
-              
-              <Bar 
-                dataKey="actual" 
-                name="Realizado" 
-                fill="#22c55e" 
-                radius={[4, 4, 0, 0]} 
+
+              <Bar
+                dataKey="actual"
+                name="Realizado"
+                fill="#22c55e"
+                radius={[4, 4, 0, 0]}
                 barSize={40}
-                label={{ 
-                    position: 'top', 
-                    fill: '#fff', 
-                    fontSize: 10,
-                    formatter: (val: number) => `R$${(val/1000).toFixed(0)}k`
+                label={{
+                  position: 'top',
+                  fill: '#fff',
+                  fontSize: 10,
+                  formatter: (val: number) => `R$${(val / 1000).toFixed(0)}k`
                 }}
               />
 
-              <Line 
-                type="monotone" 
-                dataKey="target" 
-                name="Meta" 
-                stroke="#eab308" 
+              <Line
+                type="monotone"
+                dataKey="target"
+                name="Meta"
+                stroke="#eab308"
                 strokeWidth={2}
-                dot={{ r: 6, fill: '#eab308', strokeWidth: 2, stroke: '#1f2937' }} 
-                connectNulls 
-                strokeDasharray="5 5" 
+                dot={{ r: 6, fill: '#eab308', strokeWidth: 2, stroke: '#1f2937' }}
+                connectNulls
+                strokeDasharray="5 5"
               />
             </ComposedChart>
           </ResponsiveContainer>

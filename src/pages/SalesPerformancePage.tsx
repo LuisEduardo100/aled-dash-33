@@ -3,11 +3,13 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useFilteredDashboard } from '@/hooks/useFilteredDashboard';
 import { DateFilter } from '@/types/dashboard';
 import { startOfMonth, endOfMonth } from 'date-fns';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, TrendingUp, Trophy } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Loader2, Tv } from 'lucide-react';
 import { FilterBar } from '@/components/dashboard/FilterBar';
 import { SalesPerformanceTable } from '@/components/dashboard/SalesPerformanceTable';
+import { TVDashboardView } from '@/components/dashboard/TVDashboardView';
+import { SellerDashboardCard } from '@/components/dashboard/SellerDashboardCard';
+import { Button } from '@/components/ui/button';
+
 
 export default function SalesPerformancePage() {
     // Filter State
@@ -19,6 +21,10 @@ export default function SalesPerformancePage() {
     const [ufFilter, setUfFilter] = useState('Todos');
     const [regionalFilter, setRegionalFilter] = useState('Todos');
 
+    // TV Mode State
+    const [isTVMode, setIsTVMode] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
     // Fetch Data
     const {
         deals,
@@ -27,10 +33,11 @@ export default function SalesPerformancePage() {
         refetch,
         availableSources,
         availableUfs,
-        availableRegionals
+        availableRegionals,
+        isSyncing
     } = useFilteredDashboard(
-        dateFilter, 
-        sourceFilter === 'Todos' ? null : sourceFilter, 
+        dateFilter,
+        sourceFilter === 'Todos' ? null : sourceFilter,
         ufFilter === 'Todos' ? null : ufFilter,
         regionalFilter === 'Todos' ? null : regionalFilter
     );
@@ -44,7 +51,7 @@ export default function SalesPerformancePage() {
     // Aggregate by Salesperson
     const salesByRep = useMemo(() => {
         const stats: Record<string, { totalValue: number; count: number }> = {};
-        
+
         wonDeals.forEach(deal => {
             const name = deal.responsavel_nome || 'N/A';
             if (!stats[name]) {
@@ -60,22 +67,24 @@ export default function SalesPerformancePage() {
             .sort((a, b) => b.totalValue - a.totalValue);
     }, [wonDeals]);
 
-    // Format Helpers
-    const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(val);
+    // Handle refresh with timestamp update
+    const handleRefresh = () => {
+        refetch();
+        setLastUpdated(new Date());
     };
 
-    const getInitials = (name: string) => {
-        return name
-            .split(' ')
-            .map(n => n[0])
-            .slice(0, 2)
-            .join('')
-            .toUpperCase();
-    };
+    // Render TV Mode
+    if (isTVMode) {
+        return (
+            <TVDashboardView
+                sellers={salesByRep}
+                onClose={() => setIsTVMode(false)}
+                onRefresh={handleRefresh}
+                isRefreshing={isLoading || isSyncing}
+                lastUpdated={lastUpdated}
+            />
+        );
+    }
 
     if (error) {
         return (
@@ -93,23 +102,33 @@ export default function SalesPerformancePage() {
                 {/* Header & Filter */}
                 {/* Header & Filter */}
                 <div className="flex flex-col md:flex-row gap-4 justify-end items-start md:items-center">
-                   <div className="w-full">
-                        <FilterBar 
-                             dateFilter={dateFilter}
-                             onDateFilterChange={setDateFilter}
-                             sourceFilter={sourceFilter} 
-                             onSourceFilterChange={setSourceFilter}
-                             ufFilter={ufFilter}
-                             onUfFilterChange={setUfFilter}
-                             regionalFilter={regionalFilter}
-                             onRegionalFilterChange={setRegionalFilter}
-                             isLoading={isLoading}
-                             onRefresh={refetch}
-                             availableSources={availableSources || []}
-                             availableUfs={availableUfs || []}
-                             availableRegionals={availableRegionals || []}
+                    <div className="w-full">
+                        <FilterBar
+                            dateFilter={dateFilter}
+                            onDateFilterChange={setDateFilter}
+                            sourceFilter={sourceFilter}
+                            onSourceFilterChange={setSourceFilter}
+                            ufFilter={ufFilter}
+                            onUfFilterChange={setUfFilter}
+                            regionalFilter={regionalFilter}
+                            onRegionalFilterChange={setRegionalFilter}
+                            isLoading={isLoading}
+                            onRefresh={refetch}
+                            availableSources={availableSources || []}
+                            availableUfs={availableUfs || []}
+                            availableRegionals={availableRegionals || []}
+                            isSyncing={isSyncing}
                         />
-                   </div>
+                    </div>
+                    {/* TV Mode Button */}
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsTVMode(true)}
+                        className="flex items-center gap-2 whitespace-nowrap"
+                    >
+                        <Tv className="w-4 h-4" />
+                        <span className="hidden md:inline">Modo TV</span>
+                    </Button>
                 </div>
 
                 {isLoading ? (
@@ -118,28 +137,17 @@ export default function SalesPerformancePage() {
                     </div>
                 ) : (
                     <>
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {/* Seller Dashboard Cards with full metrics */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
                             {salesByRep.map((rep, index) => (
-                                <Card key={rep.name} className={`border-l-4 ${index === 0 ? 'border-l-yellow-500' : index === 1 ? 'border-l-gray-400' : index === 2 ? 'border-l-orange-500' : 'border-l-transparent'}`}>
-                                    <CardContent className="p-4 flex items-center gap-4">
-                                        <Avatar className="h-12 w-12 border-2 border-border">
-                                            <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                                                {getInitials(rep.name)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-semibold text-foreground truncate max-w-[150px]" title={rep.name}>{rep.name}</p>
-                                            <p className="text-lg font-bold text-emerald-500">
-                                                {formatCurrency(rep.totalValue)}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                <TrendingUp className="h-3 w-3" />
-                                                {rep.count} vendas
-                                            </p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                <SellerDashboardCard
+                                    key={rep.name}
+                                    name={rep.name}
+                                    totalValue={rep.totalValue}
+                                    dealCount={rep.count}
+                                    isTopPerformer={index === 0}
+                                    rank={index + 1}
+                                />
                             ))}
                             {salesByRep.length === 0 && (
                                 <div className="col-span-full text-center text-muted-foreground p-4">
@@ -148,7 +156,7 @@ export default function SalesPerformancePage() {
                             )}
                         </div>
 
-                        {/* Detailed Table (Now using complex component) */}
+                        {/* Detailed Table */}
                         <SalesPerformanceTable deals={wonDeals} />
                     </>
                 )}

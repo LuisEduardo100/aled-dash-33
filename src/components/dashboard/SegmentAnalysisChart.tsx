@@ -21,12 +21,12 @@ const COLORS = {
   projeto: 'hsl(199, 89%, 48%)', // Blue
 };
 
-export function SegmentAnalysisChart({ 
-  varejo, 
-  projeto, 
-  varejoSources, 
+export function SegmentAnalysisChart({
+  varejo,
+  projeto,
+  varejoSources,
   projetoSources,
-  onSegmentClick 
+  onSegmentClick
 }: SegmentAnalysisChartProps) {
   // Calculate revenue and counts
   const varejoRevenue = varejo.ganhos.reduce((acc, d) => acc + (d.valor || 0), 0);
@@ -74,30 +74,32 @@ export function SegmentAnalysisChart({
     segment: string
   ) => (
     <div
-      className="flex-1 min-w-[200px] cursor-pointer hover:opacity-80 transition-opacity"
+      className="flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
       onClick={() => onSegmentClick?.(segment)}
     >
-      <div className="flex items-center gap-2 mb-3 p-3 rounded-lg" style={{ backgroundColor: `${color}20` }}>
-        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
-        <div className="flex-1">
-          <h4 className="font-semibold text-foreground">{title}</h4>
-          <p className="text-xs text-muted-foreground">{count} negócios</p>
+      <div className="mb-3 p-3 rounded-lg" style={{ backgroundColor: `${color}20` }}>
+        {/* Header row with segment name */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+          <h4 className="font-semibold text-foreground text-sm">{title}</h4>
+          <span className="text-xs text-muted-foreground">({count} negócios)</span>
         </div>
-        <div className="text-right">
-          <p className="text-lg font-bold text-foreground">{formatCurrency(revenue)}</p>
+        {/* Revenue info - stacked for better readability */}
+        <div className="pl-5">
+          <p className="text-base font-bold text-foreground break-all">{formatCurrency(revenue)}</p>
           <p className="text-xs text-muted-foreground">
             {totalRevenue > 0 ? ((revenue / totalRevenue) * 100).toFixed(1) : 0}% da receita
           </p>
         </div>
       </div>
-      <div className="space-y-1.5 pl-2">
-        <p className="text-xs text-muted-foreground mb-2">Top Fontes:</p>
+      <div className="space-y-1 pl-2">
+        <p className="text-xs text-muted-foreground mb-1">Top Fontes:</p>
         {sources.slice(0, 4).map((source, idx) => (
-          <div key={idx} className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground truncate max-w-[120px]" title={source.name}>
+          <div key={idx} className="flex items-center justify-between text-xs gap-2">
+            <span className="text-muted-foreground truncate flex-1" title={source.name}>
               {source.name}
             </span>
-            <span className="font-medium text-foreground">{source.value}</span>
+            <span className="font-medium text-foreground flex-shrink-0">{source.value}</span>
           </div>
         ))}
         {sources.length === 0 && (
@@ -125,10 +127,10 @@ export function SegmentAnalysisChart({
       <CardHeader>
         <CardTitle className="text-lg">Análise por Segmento</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col lg:flex-row items-start gap-6">
+      <CardContent className="overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-start gap-6 min-w-0">
           {/* Pie Chart */}
-          <div className="w-full lg:w-[220px] flex flex-col items-center">
+          <div className="w-full lg:w-[220px] flex-shrink-0 flex flex-col items-center">
             <div className="h-[200px] w-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -148,12 +150,12 @@ export function SegmentAnalysisChart({
                       const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
                       return (
-                        <text 
-                          x={x} 
-                          y={y} 
-                          fill="white" 
-                          textAnchor="middle" 
-                          dominantBaseline="central" 
+                        <text
+                          x={x}
+                          y={y}
+                          fill="white"
+                          textAnchor="middle"
+                          dominantBaseline="central"
                           className="text-[10px] font-bold drop-shadow-md"
                         >
                           {totalRevenue > 0 ? ((value / totalRevenue) * 100).toFixed(0) : 0}%
@@ -181,7 +183,7 @@ export function SegmentAnalysisChart({
           </div>
 
           {/* Segment Details */}
-          <div className="flex-1 flex flex-col md:flex-row gap-4 w-full">
+          <div className="flex-1 min-w-0 flex flex-col md:flex-row gap-4 w-full overflow-hidden">
             {renderSegmentDetail('Varejo', varejoRevenue, varejoCount, varejoSources, COLORS.varejo, 'varejo')}
             {renderSegmentDetail('Projeto', projetoRevenue, projetoCount, projetoSources, COLORS.projeto, 'projeto')}
           </div>

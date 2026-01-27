@@ -7,14 +7,15 @@ interface DiscardReasonChartProps {
     data: { name: string; value: number }[];
     lossData?: { name: string; value: number }[]; // New prop for Lost Deals
     onReasonClick?: (reason: string, type: 'lead' | 'deal') => void;
+    hideToggle?: boolean; // Hide the Leads/Negócios toggle when in leads-only context
 }
 
-export function DiscardReasonChart({ data, lossData, onReasonClick }: DiscardReasonChartProps) {
+export function DiscardReasonChart({ data, lossData, onReasonClick, hideToggle = false }: DiscardReasonChartProps) {
     const [viewType, setViewType] = useState<'lead' | 'deal'>('lead');
 
     // Select data based on view type
-    const activeData = viewType === 'deal' && lossData ? lossData : data;
-    const title = viewType === 'deal' ? 'Motivos de Perda (Negócios)' : 'Motivos de Descarte (Leads)';
+    const activeData = (viewType === 'deal' && lossData && !hideToggle) ? lossData : data;
+    const title = (viewType === 'deal' && !hideToggle) ? 'Motivos de Perda (Negócios)' : 'Motivos de Descarte (Leads)';
 
     // Take only top 7 reasons
     const chartData = activeData.slice(0, 7);
@@ -23,12 +24,14 @@ export function DiscardReasonChart({ data, lossData, onReasonClick }: DiscardRea
         <Card className="h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg">{title}</CardTitle>
-                <Tabs value={viewType} onValueChange={(v) => setViewType(v as 'lead' | 'deal')}>
-                    <TabsList className="h-8">
-                        <TabsTrigger value="lead" className="text-xs h-7">Leads</TabsTrigger>
-                        <TabsTrigger value="deal" className="text-xs h-7">Negócios</TabsTrigger>
-                    </TabsList>
-                </Tabs>
+                {!hideToggle && (
+                    <Tabs value={viewType} onValueChange={(v) => setViewType(v as 'lead' | 'deal')}>
+                        <TabsList className="h-8">
+                            <TabsTrigger value="lead" className="text-xs h-7">Leads</TabsTrigger>
+                            <TabsTrigger value="deal" className="text-xs h-7">Negócios</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                )}
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col gap-3 mt-2">
