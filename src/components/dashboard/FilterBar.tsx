@@ -303,25 +303,29 @@ export function FilterBar({
                 <div className="bg-muted/30 px-3 py-1.5 rounded-md border border-border/30 text-xs font-medium text-muted-foreground hidden xl:block">
                     {activePreset === 'custom' ? getDateRangeLabel() : activePreset === 'mesAtual' ? 'Este Mês' : activePreset === 'ultimos7' ? 'Últimos 7 dias' : 'Hoje'}
                 </div>
+                {/* Local Refresh - Only show if no sync or explicit request, or keep both but distinct */}
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={onRefresh}
                     disabled={isLoading || isSyncing}
                     className="h-9 w-9 p-0 rounded-full hover:bg-muted"
+                    title="Atualizar dados locais"
                 >
-                    <RefreshCw className={cn("h-4 w-4 text-muted-foreground", (isLoading || isSyncing) && "animate-spin text-primary")} />
+                    <RefreshCw className={cn("h-4 w-4 text-muted-foreground", isLoading && "animate-spin")} />
                 </Button>
+
                 {onSync && (
                     <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={onSync}
                         disabled={isSyncing || isLoading}
-                        className="h-9 w-9 p-0 rounded-full hover:bg-muted"
-                        title="Sincronizar"
+                        className="h-9 gap-2 rounded-full hover:bg-muted ml-2"
+                        title="Sincronizar com CRM"
                     >
-                        <RefreshCw className={cn("h-4 w-4 text-primary", isSyncing && "animate-spin")} />
+                        <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} />
+                        <span className="hidden sm:inline text-xs">Sincronizar</span>
                     </Button>
                 )}
             </div>

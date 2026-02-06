@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DateFilter, SegmentedDeal } from '@/types/dashboard';
 import { API_CONFIG } from '@/config/api';
+import { subMonths } from 'date-fns';
 
 export interface CreatedDealsMetrics {
     total: number;
@@ -96,19 +97,13 @@ export const useCreatedDeals = (
         const startDate = dateFilter.startDate;
         const endDate = dateFilter.endDate;
 
-        // Calculate Previous Period
+        // Calculate Previous Period (Month-over-Month comparison)
         let prevStartDate: Date | null = null;
         let prevEndDate: Date | null = null;
 
         if (startDate && endDate) {
-            const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            prevEndDate = new Date(startDate);
-            prevEndDate.setDate(prevEndDate.getDate() - 1);
-
-            prevStartDate = new Date(prevEndDate);
-            prevStartDate.setDate(prevStartDate.getDate() - diffDays);
+            prevStartDate = subMonths(startDate, 1);
+            prevEndDate = subMonths(endDate, 1);
         }
 
         // Filter Function
