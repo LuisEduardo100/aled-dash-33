@@ -47,6 +47,8 @@ export interface SegmentedDeal {
     responsavel_nome: string; // Pre-treated, display directly
     criador_nome: string;
     is_novo: boolean;
+    is_ganho: boolean;
+    is_fechado: boolean;
     link_bitrix: string;
     link_kinbox?: string;
     id_lead?: string; // New: Lead ID for conversion analysis

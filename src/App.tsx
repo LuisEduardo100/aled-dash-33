@@ -7,6 +7,7 @@ import AdvancedLeadsPage from "./pages/AdvancedLeadsPage";
 import DemandGenerationPage from "./pages/DemandGenerationPage";
 import SalesPerformancePage from "./pages/SalesPerformancePage";
 import LeadConversionReport from "./pages/LeadConversionReport";
+import CreatedDealsDashboard from "./pages/CreatedDealsDashboard";
 import LeadsDashboard from "./pages/LeadsDashboard";
 import DealsDashboard from "./pages/DealsDashboard";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/demand-generation" element={<DemandGenerationPage />} />
             <Route path="/advanced-leads" element={<AdvancedLeadsPage />} />
             <Route path="/sales-performance" element={<SalesPerformancePage />} />
+            <Route path="/created-deals" element={<CreatedDealsDashboard />} />
             <Route path="/lead-conversion" element={<LeadConversionReport />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

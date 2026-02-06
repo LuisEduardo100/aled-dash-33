@@ -67,7 +67,7 @@ export const MonthlyGoalSection: React.FC<MonthlyGoalSectionProps> = ({ metrics,
                     offsetCenter: [0, '-10%'],
                     valueAnimation: true,
                     formatter: function (value: number) {
-                        return `{value|${Math.round(value)}}\n{label|leads}`;
+                        return `{value|${Math.round(value)}}\n{label|projetos}`;
                     },
                     rich: {
                         value: {

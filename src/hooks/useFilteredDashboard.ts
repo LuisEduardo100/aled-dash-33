@@ -77,6 +77,14 @@ const filterByRegional = <T extends { regional?: string }>(items: T[], regional:
     return items.filter(item => (item.regional || 'N/A') === regional);
 };
 
+const filterBySegment = <T extends { segmento?: string }>(items: T[], segment: string | null): T[] => {
+    if (!segment || segment === 'Todos') return items;
+    return items.filter(item => {
+        const seg = (item.segmento || '').toLowerCase();
+        return seg === segment.toLowerCase();
+    });
+};
+
 const filterByFunnel = <T extends { id: string }>(items: T[], allowedIds: Set<string> | null): T[] => {
     if (!allowedIds) return items;
     return items.filter(item => allowedIds.has(item.id));
@@ -354,7 +362,8 @@ export const useFilteredDashboard = (
     sourceFilter: string | null = null,
     ufFilter: string | null = null,
     regionalFilter: string | null = null,
-    funnelFilter: string | null = null // NEW
+    funnelFilter: string | null = null,
+    segmentFilter: string | null = null // NEW: Varejo/Projeto filter
 ) => {
     // ... fetchData logic (same) ...
 
@@ -598,9 +607,9 @@ export const useFilteredDashboard = (
 
         // Apply Funnel Filter to Status Deals
         const filteredDealsByStatusFiltered = {
-            ganhos: filterByFunnel(filteredDealsByStatus.ganhos, allowedDealIds),
-            perdidos: filterByFunnel(filteredDealsByStatus.perdidos, allowedDealIds),
-            andamento: filterByFunnel(filteredDealsByStatus.andamento, allowedDealIds),
+            ganhos: filterBySegment(filterByFunnel(filteredDealsByStatus.ganhos, allowedDealIds), segmentFilter),
+            perdidos: filterBySegment(filterByFunnel(filteredDealsByStatus.perdidos, allowedDealIds), segmentFilter),
+            andamento: filterBySegment(filterByFunnel(filteredDealsByStatus.andamento, allowedDealIds), segmentFilter),
         };
 
         // Filter deals by segment

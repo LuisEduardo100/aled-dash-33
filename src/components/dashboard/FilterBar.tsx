@@ -26,7 +26,10 @@ interface FilterBarProps {
     funnelFilter?: string;
     onFunnelFilterChange?: (funnel: string) => void;
     availableFunnels?: string[];
+    segmentFilter?: string;
+    onSegmentFilterChange?: (segment: string) => void;
     onRefresh: () => void;
+    onSync?: () => void;
     isLoading?: boolean;
     isSyncing?: boolean;
 }
@@ -58,7 +61,10 @@ export function FilterBar({
     funnelFilter,
     onFunnelFilterChange,
     availableFunnels,
+    segmentFilter,
+    onSegmentFilterChange,
     onRefresh,
+    onSync,
     isLoading = false,
     isSyncing = false,
 }: FilterBarProps) {
@@ -221,10 +227,10 @@ export function FilterBar({
                 {onRegionalFilterChange && availableRegionals && (
                     <div className="flex items-center gap-2">
                         <Select value={regionalFilter} onValueChange={onRegionalFilterChange}>
-                            <SelectTrigger className="w-auto min-w-[140px] max-w-[200px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
+                            <SelectTrigger className="w-auto min-w-[160px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
                                 <div className="flex items-center gap-2 text-muted-foreground w-full min-w-0">
                                     <MapPin className="h-3.5 w-3.5 shrink-0" />
-                                    <span className="font-medium text-foreground truncate flex-1 text-left">{regionalFilter === 'Todos' ? 'Todas Regionais' : regionalFilter}</span>
+                                    <span className="font-medium text-foreground flex-1 text-left">{regionalFilter === 'Todos' ? 'Todas Regionais' : regionalFilter}</span>
                                 </div>
                             </SelectTrigger>
                             <SelectContent align="start" className="rounded-xl">
@@ -245,6 +251,27 @@ export function FilterBar({
                                         </div>
                                     </SelectItem>
                                 ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+
+                {/* Segment Filter (Varejo/Projeto) */}
+                {onSegmentFilterChange && (
+                    <div className="flex items-center gap-2">
+                        <Select value={segmentFilter || 'Todos'} onValueChange={onSegmentFilterChange}>
+                            <SelectTrigger className="w-auto min-w-[120px] h-9 rounded-full bg-background border-border/60 hover:bg-accent/50 focus:ring-0 focus:ring-offset-0 text-sm">
+                                <div className="flex items-center gap-2 text-muted-foreground w-full min-w-0">
+                                    <Layers className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="font-medium text-foreground flex-1 text-left">
+                                        {segmentFilter === 'Todos' ? 'Todos Segmentos' : segmentFilter}
+                                    </span>
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent align="start" className="rounded-xl">
+                                <SelectItem value="Todos" className="text-sm">Todos</SelectItem>
+                                <SelectItem value="Varejo" className="text-sm">Varejo</SelectItem>
+                                <SelectItem value="Projeto" className="text-sm">Projeto</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -285,6 +312,18 @@ export function FilterBar({
                 >
                     <RefreshCw className={cn("h-4 w-4 text-muted-foreground", (isLoading || isSyncing) && "animate-spin text-primary")} />
                 </Button>
+                {onSync && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onSync}
+                        disabled={isSyncing || isLoading}
+                        className="h-9 w-9 p-0 rounded-full hover:bg-muted"
+                        title="Sincronizar"
+                    >
+                        <RefreshCw className={cn("h-4 w-4 text-primary", isSyncing && "animate-spin")} />
+                    </Button>
+                )}
             </div>
         </div>
     );

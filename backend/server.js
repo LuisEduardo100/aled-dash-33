@@ -3,6 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const dashboardService = require('./dashboardService');
 
+const createdDealService = require('./createdDealService');
+const cron = require('node-cron');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -72,6 +75,42 @@ app.post('/api/sync', async (req, res) => {
     console.error('Sync Error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ============================================================
+// NEW: Created Deals Endpoints
+// ============================================================
+
+// Get cached created deals
+app.get('/api/created-deals/raw', async (req, res) => {
+    try {
+        const limit = req.query.limit ? parseInt(req.query.limit) : 5000;
+        const deals = await createdDealService.getCachedDeals(limit);
+        res.json({ success: true, count: deals.length, deals: deals });
+    } catch (error) {
+        console.error('API Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// Manual Sync Trigger
+app.post('/api/created-deals/sync', async (req, res) => {
+    try {
+        req.setTimeout(600000); // 10 mins timeout for large sync
+        console.log('Triggering Created Deals Sync...');
+        
+        const result = await createdDealService.syncDealsFromBitrix();
+        res.json(result);
+    } catch (error) {
+        console.error('Sync Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Hourly Cron Job for Sync (At minute 0)
+cron.schedule('0 * * * *', () => {
+    console.log('[Cron] Running hourly sync of Created Deals...');
+    createdDealService.syncDealsFromBitrix();
 });
 
 // Health Check

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart4, Sun, Moon, Trophy, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart4, Sun, Moon, Trophy, DollarSign, TrendingUp } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/components/ThemeProvider';
@@ -21,6 +21,7 @@ const menuItems = [
   { title: 'Dashboard de Leads', url: '/', icon: Users },
   { title: 'Dashboard de Negócios', url: '/deals-dashboard', icon: DollarSign },
   { title: 'Geração de Demanda', url: '/demand-generation', icon: BarChart4 },
+  { title: 'Análise de Negócios', url: '/created-deals', icon: TrendingUp },
   { title: 'Performance Vendas', url: '/sales-performance', icon: Trophy },
   { title: 'Lista de Leads Avançada', url: '/advanced-leads', icon: Users },
   { title: 'Relatório de Conversão', url: '/lead-conversion', icon: BarChart4 },
@@ -80,14 +81,16 @@ export function DashboardSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="w-full flex items-center justify-between"
+              asChild
+              className="w-full flex items-center justify-between cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                <span>{theme === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</span>
+              <div onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                <div className="flex items-center gap-2">
+                  {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  <span>{theme === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</span>
+                </div>
+                <Switch checked={theme === 'dark'} onCheckedChange={(c) => setTheme(c ? 'dark' : 'light')} />
               </div>
-              <Switch checked={theme === 'dark'} onCheckedChange={(c) => setTheme(c ? 'dark' : 'light')} />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -44,7 +44,6 @@ const formatCurrency = (value: number) => {
 
 // ========== MAIN COMPONENT ==========
 export default function DealsDashboard() {
-  // Filter state
   const [dateFilter, setDateFilter] = useState<DateFilter>({
     startDate: startOfMonth(new Date()),
     endDate: endOfMonth(new Date())
@@ -53,6 +52,7 @@ export default function DealsDashboard() {
   const [ufFilter, setUfFilter] = useState('Todos');
   const [regionalFilter, setRegionalFilter] = useState('Todos');
   const [funnelFilter, setFunnelFilter] = useState('Todos');
+  const [segmentFilter, setSegmentFilter] = useState('Todos');
 
   // Modal state
   const [modalState, setModalState] = useState<ModalState>({
@@ -86,7 +86,8 @@ export default function DealsDashboard() {
     sourceFilter === 'Todos' ? null : sourceFilter,
     ufFilter === 'Todos' ? null : ufFilter,
     regionalFilter === 'Todos' ? null : regionalFilter,
-    funnelFilter === 'Todos' ? null : funnelFilter
+    funnelFilter === 'Todos' ? null : funnelFilter,
+    segmentFilter === 'Todos' ? null : segmentFilter
   );
 
   // ========== SAFRA (COHORT) METRICS ==========
@@ -287,6 +288,8 @@ export default function DealsDashboard() {
           funnelFilter={funnelFilter}
           onFunnelFilterChange={setFunnelFilter}
           availableFunnels={availableFunnels}
+          segmentFilter={segmentFilter}
+          onSegmentFilterChange={setSegmentFilter}
           onRefresh={refetch}
           isLoading={isLoading}
           isSyncing={isSyncing}
