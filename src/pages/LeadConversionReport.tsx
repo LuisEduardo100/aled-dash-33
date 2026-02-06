@@ -25,13 +25,24 @@ export default function LeadConversionReport() {
     });
     const [sourceFilter, setSourceFilter] = useState('Todos');
     const [ufFilter, setUfFilter] = useState('Todos');
+    const [segmentFilter, setSegmentFilter] = useState('Todos');
     const [timeRangeModalData, setTimeRangeModalData] = useState<{ range: string; deals: SegmentedDeal[] } | null>(null);
     const [selectedAuditDeal, setSelectedAuditDeal] = useState<{ deal: SegmentedDeal, type: 'lead' | 'deal' } | null>(null);
 
     // Cache key for localStorage (based on date range for freshness)
     const cacheKey = useMemo(() => {
-        const start = dateFilter.startDate ? format(dateFilter.startDate, 'yyyy-MM-dd') : '';
-        const end = dateFilter.endDate ? format(dateFilter.endDate, 'yyyy-MM-dd') : '';
+        let start = '';
+        let end = '';
+        try {
+            if (dateFilter.startDate && !isNaN(dateFilter.startDate.getTime())) {
+                start = format(dateFilter.startDate, 'yyyy-MM-dd');
+            }
+            if (dateFilter.endDate && !isNaN(dateFilter.endDate.getTime())) {
+                end = format(dateFilter.endDate, 'yyyy-MM-dd');
+            }
+        } catch (e) {
+            console.warn('Invalid date for cache key:', e);
+        }
         return `deepLinkedDeals_${start}_${end}`;
     }, [dateFilter]);
 
@@ -68,7 +79,8 @@ export default function LeadConversionReport() {
         sourceFilter === 'Todos' ? null : sourceFilter,
         ufFilter === 'Todos' ? null : ufFilter,
         null,
-        null
+        null,
+        segmentFilter === 'Todos' ? null : segmentFilter
     );
 
     // Combine all deals from por_status
@@ -523,6 +535,8 @@ export default function LeadConversionReport() {
                             onRefresh={refetch}
                             isLoading={isLoading}
                             isSyncing={isSyncing}
+                            segmentFilter={segmentFilter}
+                            onSegmentFilterChange={setSegmentFilter}
                         />
                     </div>
 
