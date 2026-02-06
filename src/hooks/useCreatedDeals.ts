@@ -17,7 +17,8 @@ export const useCreatedDeals = (
     dateFilter: DateFilter,
     sourceFilter: string | null = null,
     ufFilter: string | null = null,
-    regionalFilter: string | null = null
+    regionalFilter: string | null = null,
+    segmentFilter: string | null = null
 ) => {
     const [rawDeals, setRawDeals] = useState<SegmentedDeal[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -137,6 +138,12 @@ export const useCreatedDeals = (
                 if ((deal.regional || 'N/A') !== regionalFilter) return false;
             }
 
+            // 5. Segment Filter
+            if (segmentFilter && segmentFilter !== 'Todos') {
+                const seg = deal.segmento || 'Outros';
+                if (seg !== segmentFilter) return false;
+            }
+
             return true;
         };
 
@@ -213,7 +220,7 @@ export const useCreatedDeals = (
             timeline,
             sourcesChart: sources
         };
-    }, [rawDeals, dateFilter, sourceFilter, ufFilter, regionalFilter]);
+    }, [rawDeals, dateFilter, sourceFilter, ufFilter, regionalFilter, segmentFilter]);
 
     // Available Filters Calculation (from RAW data)
     const availableFilters = useMemo(() => {

@@ -49,6 +49,7 @@ export default function CreatedDealsDashboard() {
     const [sourceFilter, setSourceFilter] = useState('Todos');
     const [ufFilter, setUfFilter] = useState('Todos');
     const [regionalFilter, setRegionalFilter] = useState('Todos');
+    const [segmentFilter, setSegmentFilter] = useState('Todos');
 
     const {
         metrics,
@@ -66,7 +67,7 @@ export default function CreatedDealsDashboard() {
         error,
         refetch,
         syncData
-    } = useCreatedDeals(dateFilter, sourceFilter, ufFilter, regionalFilter);
+    } = useCreatedDeals(dateFilter, sourceFilter, ufFilter, regionalFilter, segmentFilter);
 
     // Format Helpers
     const formatCurrency = (val: number) => {
@@ -131,6 +132,8 @@ export default function CreatedDealsDashboard() {
                     onSync={syncData}
                     isLoading={isLoading}
                     isSyncing={isSyncing}
+                    segmentFilter={segmentFilter}
+                    onSegmentFilterChange={setSegmentFilter}
                 />
             </div>
 
