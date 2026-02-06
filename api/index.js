@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import * as dashboardService from './dashboardService.js';
+import createdDealService from '../backend/createdDealService.js';
 
 // Initialize Express
 const app = express();
@@ -73,6 +74,36 @@ app.post('/api/sync', async (req, res) => {
     console.error('Sync Error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ============================================================
+// NEW: Created Deals Endpoints
+// ============================================================
+
+// Get cached created deals
+app.get('/api/created-deals/raw', async (req, res) => {
+    try {
+        const limit = req.query.limit ? parseInt(req.query.limit) : 5000;
+        const deals = await createdDealService.getCachedDeals(limit);
+        res.json({ success: true, count: deals.length, deals: deals });
+    } catch (error) {
+        console.error('API Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// Manual Sync Trigger
+app.post('/api/created-deals/sync', async (req, res) => {
+    try {
+        // Vercel timeout note: This might timeout on Vercel Pro/Free
+        console.log('Triggering Created Deals Sync...');
+        
+        const result = await createdDealService.syncDealsFromBitrix();
+        res.json(result);
+    } catch (error) {
+        console.error('Sync Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 // Health Check
