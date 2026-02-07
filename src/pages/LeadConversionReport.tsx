@@ -27,7 +27,7 @@ export default function LeadConversionReport() {
     const [ufFilter, setUfFilter] = useState('Todos');
     const [segmentFilter, setSegmentFilter] = useState('Todos');
     const [timeRangeModalData, setTimeRangeModalData] = useState<{ range: string; deals: SegmentedDeal[] } | null>(null);
-    const [selectedAuditDeal, setSelectedAuditDeal] = useState<{ deal: SegmentedDeal, type: 'lead' | 'deal' } | null>(null);
+    const [selectedAuditDeal, setSelectedAuditDeal] = useState<{ deal: SegmentedDeal, type: 'lead' | 'deal' | 'fastest' | 'slowest' } | null>(null);
 
     // Cache key for localStorage (based on date range for freshness)
     const cacheKey = useMemo(() => {
