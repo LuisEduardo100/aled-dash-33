@@ -1,0 +1,66 @@
+System Time: Tue Feb 10 2026 17:04:56 GMT-0300 (Horário Padrão de Brasília)
+Start of Today: Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+End of Today: Tue Feb 10 2026 23:59:59 GMT-0300 (Horário Padrão de Brasília)
+
+--- Hour: 0:00 ---
+Original Local: Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+Original ISO: 2026-02-10T03:00:00.000Z
+Stored ISO (+4h): 2026-02-10T03:00:00.000Z
+Included? true
+Stored Date (Local): Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+Start Date (Local): Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+End Date (Local): Tue Feb 10 2026 23:59:59 GMT-0300 (Horário Padrão de Brasília)
+
+--- Hour: 8:00 ---
+Original Local: Tue Feb 10 2026 08:00:00 GMT-0300 (Horário Padrão de Brasília)
+Original ISO: 2026-02-10T11:00:00.000Z
+Stored ISO (+4h): 2026-02-10T11:00:00.000Z
+Included? true
+Stored Date (Local): Tue Feb 10 2026 08:00:00 GMT-0300 (Horário Padrão de Brasília)
+Start Date (Local): Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+End Date (Local): Tue Feb 10 2026 23:59:59 GMT-0300 (Horário Padrão de Brasília)
+
+--- Hour: 10:00 ---
+Original Local: Tue Feb 10 2026 10:00:00 GMT-0300 (Horário Padrão de Brasília)
+Original ISO: 2026-02-10T13:00:00.000Z
+Stored ISO (+4h): 2026-02-10T13:00:00.000Z
+Included? true
+Stored Date (Local): Tue Feb 10 2026 10:00:00 GMT-0300 (Horário Padrão de Brasília)
+Start Date (Local): Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+End Date (Local): Tue Feb 10 2026 23:59:59 GMT-0300 (Horário Padrão de Brasília)
+
+--- Hour: 12:00 ---
+Original Local: Tue Feb 10 2026 12:00:00 GMT-0300 (Horário Padrão de Brasília)
+Original ISO: 2026-02-10T15:00:00.000Z
+Stored ISO (+4h): 2026-02-10T15:00:00.000Z
+Included? true
+Stored Date (Local): Tue Feb 10 2026 12:00:00 GMT-0300 (Horário Padrão de Brasília)
+Start Date (Local): Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+End Date (Local): Tue Feb 10 2026 23:59:59 GMT-0300 (Horário Padrão de Brasília)
+
+--- Hour: 16:00 ---
+Original Local: Tue Feb 10 2026 16:00:00 GMT-0300 (Horário Padrão de Brasília)
+Original ISO: 2026-02-10T19:00:00.000Z
+Stored ISO (+4h): 2026-02-10T19:00:00.000Z
+Included? true
+Stored Date (Local): Tue Feb 10 2026 16:00:00 GMT-0300 (Horário Padrão de Brasília)
+Start Date (Local): Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+End Date (Local): Tue Feb 10 2026 23:59:59 GMT-0300 (Horário Padrão de Brasília)
+
+--- Hour: 20:00 ---
+Original Local: Tue Feb 10 2026 20:00:00 GMT-0300 (Horário Padrão de Brasília)
+Original ISO: 2026-02-10T23:00:00.000Z
+Stored ISO (+4h): 2026-02-10T23:00:00.000Z
+Included? true
+Stored Date (Local): Tue Feb 10 2026 20:00:00 GMT-0300 (Horário Padrão de Brasília)
+Start Date (Local): Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+End Date (Local): Tue Feb 10 2026 23:59:59 GMT-0300 (Horário Padrão de Brasília)
+
+--- Hour: 23:00 ---
+Original Local: Tue Feb 10 2026 23:00:00 GMT-0300 (Horário Padrão de Brasília)
+Original ISO: 2026-02-11T02:00:00.000Z
+Stored ISO (+4h): 2026-02-11T02:00:00.000Z
+Included? true
+Stored Date (Local): Tue Feb 10 2026 23:00:00 GMT-0300 (Horário Padrão de Brasília)
+Start Date (Local): Tue Feb 10 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)
+End Date (Local): Tue Feb 10 2026 23:59:59 GMT-0300 (Horário Padrão de Brasília)

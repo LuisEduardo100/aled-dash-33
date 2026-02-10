@@ -92,7 +92,7 @@ const normalizarDataFuso = (dataIso) => {
     // Let's stick to true ISO for storage, but maybe the user wants the display logic?
     // The user said: "A lógica é você trazer tudo do bitrix, salvar os dados tratados"
     // So let's apply the treatment.
-    d.setHours(d.getHours() + 4);
+    // d.setHours(d.getHours() + 4); // REMOVED: Causing issues with "Today" filter by shifting into next day due totimezone logic duplication
     return d.toISOString();
 };
 
