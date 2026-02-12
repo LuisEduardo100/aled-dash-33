@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DateFilter, SegmentedDeal } from '@/types/dashboard';
 import { API_CONFIG } from '@/config/api';
-import { subMonths } from 'date-fns';
+import { subMonths, isWithinInterval } from 'date-fns';
 
 export interface CreatedDealsMetrics {
     total: number;
@@ -112,7 +112,7 @@ export const useCreatedDeals = (
             // 1. Date Filter (Creation Date)
             if (deal.data_criacao && start && end) {
                 const date = new Date(deal.data_criacao);
-                if (date < start || date > end) return false;
+                if (!isWithinInterval(date, { start, end })) return false;
             }
 
             // 2. Source Filter
