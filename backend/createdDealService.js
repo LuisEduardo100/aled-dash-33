@@ -4,7 +4,29 @@ const bitrixService = require('./bitrixService');
 const syncDealsFromBitrix = async () => {
     console.log('[Sync] Starting Sync: Created Deals from Bitrix...');
     try {
-        const rawDeals = await bitrixService.fetchDealsFromBitrix();
+        // Find the most recent date we have in our database to use for incremental sync
+        let lastUpdateDate = null;
+        try {
+            const dateRes = await db.query(`SELECT MAX(data_criacao) as last_date FROM cached_created_deals`);
+            if (dateRes.rows.length > 0 && dateRes.rows[0].last_date) {
+                // Formatting for bitrix filter (> date), usually ISO strings work well
+                // Subtracting 1 day just to be safe with timezone issues and catch edge cases
+                const d = new Date(dateRes.rows[0].last_date);
+                d.setDate(d.getDate() - 1);
+                lastUpdateDate = d.toISOString();
+                console.log(`[Sync] Found existing data. Fetching deals modified after: ${lastUpdateDate}`);
+            }
+        } catch (e) {
+            console.log('[Sync] Could not determine last update date. Doing full sync.');
+        }
+
+        const rawDeals = await bitrixService.fetchDealsFromBitrix(lastUpdateDate);
+        
+        if (rawDeals.length === 0) {
+            console.log('[Sync] No new deals found.');
+            return { success: true, count: 0, message: 'No new deals to sync.' };
+        }
+
         const processedDeals = bitrixService.processDeals(rawDeals);
 
         console.log(`[Sync] Processing ${processedDeals.length} deals to DB...`);

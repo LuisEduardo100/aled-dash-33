@@ -119,7 +119,7 @@ const tratarStatusDeal = (deal) => {
 // ============================================================
 // 3. API FETCHING
 // ============================================================
-async function fetchDealsFromBitrix() {
+async function fetchDealsFromBitrix(lastUpdateDate = null) {
     const url = process.env.BITRIX_WEBHOOK_URL + "crm.deal.list";
     let allDeals = [];
     let start = 0;
@@ -130,17 +130,27 @@ async function fetchDealsFromBitrix() {
     // Bitrix API filter: { "CATEGORY_ID": [8, 304, 306] } usually works
     
     console.log(`Starting Bitrix Fetch for funnels: ${TARGET_FUNNELS.join(', ')}`);
+    if (lastUpdateDate) {
+        console.log(`Incremental sync enabled. Fetching deals modified after: ${lastUpdateDate}`);
+    }
 
     while (hasMore) {
         try {
+            const filterObj = {
+                "CATEGORY_ID": TARGET_FUNNELS
+            };
+
+            // Use DATE_MODIFY for true incremental sync (catches updates AND creations)
+            if (lastUpdateDate) {
+                filterObj[">=DATE_MODIFY"] = lastUpdateDate;
+            }
+
             const body = {
                 start: start,
-                filter: {
-                    "CATEGORY_ID": TARGET_FUNNELS
-                },
+                filter: filterObj,
                 select: [
                     "ID", "TITLE", "OPPORTUNITY", "STAGE_ID", "CATEGORY_ID",
-                    "DATE_CREATE", "CLOSEDATE", "CLOSED", "BEGINDATE",
+                    "DATE_CREATE", "DATE_MODIFY", "CLOSEDATE", "CLOSED", "BEGINDATE",
                     "ASSIGNED_BY_ID", "CREATED_BY_ID", "SOURCE_ID",
                     KEY_TIPO, KEY_ESTADO, KEY_CIDADE, KEY_LINK_KINBOX_DEAL,
                     KEY_TELEFONE_DEAL, KEY_ID_LEAD_ORIGEM, KEY_MOTIVO_PERDA_DEAL
