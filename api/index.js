@@ -106,6 +106,47 @@ app.post('/api/created-deals/sync', async (req, res) => {
     }
 });
 
+// NEW: Vercel Native Cron Endpoint
+// Called periodically by Vercel Cron as defined in vercel.json
+app.get('/api/cron/sync', async (req, res) => {
+    try {
+        console.log('[Cron] Triggering Routine Sync Jobs...');
+
+        // Extend timeout for Vercel execution limit if possible (Pro/Enterprise)
+        req.setTimeout(300000); 
+
+        const results = await Promise.allSettled([
+            // Sync Dashboard Data (Triggers Bitrix to Postgres Webhook)
+            fetch('https://webhookrota.aled1.com/webhook/sync-bitrix-postgres', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            }).then(r => {
+                if(!r.ok) throw new Error(`Dashboard Webhook Failed: ${r.status}`);
+                return r.json();
+            }),
+            
+            // Sync Created Deals
+            createdDealService.syncDealsFromBitrix()
+        ]);
+
+        const dashboardResult = results[0];
+        const createdDealsResult = results[1];
+
+        res.json({
+            success: true,
+            message: 'Cron sync completed',
+            details: {
+                dashboard: dashboardResult.status === 'fulfilled' ? 'success' : dashboardResult.reason?.message || 'failed',
+                createdDeals: createdDealsResult.status === 'fulfilled' ? 'success' : createdDealsResult.reason?.message || 'failed'
+            }
+        });
+    } catch (error) {
+        console.error('[Cron] Sync Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
