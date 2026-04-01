@@ -16,7 +16,7 @@ interface DashboardDataResult {
  */
 export const useDashboardData = (
     dateFilter?: DateFilter,
-    scope: string = 'mes_atual'
+    scope: string = 'trimestre_atual'
 ): DashboardDataResult => {
     const [leads, setLeads] = useState<RawLead[]>([]);
     const [deals, setDeals] = useState<RawDeal[]>([]);

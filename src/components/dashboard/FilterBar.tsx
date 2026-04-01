@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { DateFilter } from '@/types/dashboard';
-import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
@@ -44,7 +44,7 @@ const REGIONAL_DESCRIPTIONS: Record<string, string> = {
     'Regional BR': 'Todo Brasil exceto Regional CE, PI, NE e SP',
 };
 
-type DatePreset = 'hoje' | 'ultimos7' | 'mesAtual' | 'custom';
+type DatePreset = 'hoje' | 'ultimos7' | 'mesAtual' | 'mesAnterior' | 'custom';
 
 export function FilterBar({
     dateFilter,
@@ -101,6 +101,14 @@ export function FilterBar({
                     endDate: endOfMonth(now),
                 });
                 break;
+            case 'mesAnterior': {
+                const prevMonth = subMonths(now, 1);
+                onDateFilterChange({
+                    startDate: startOfMonth(prevMonth),
+                    endDate: endOfMonth(prevMonth),
+                });
+                break;
+            }
             case 'custom':
                 setShowCustomPicker(true);
                 break;
@@ -150,6 +158,14 @@ export function FilterBar({
                     className={cn("h-7 text-xs rounded-md transition-all", activePreset === 'mesAtual' && "shadow-sm")}
                 >
                     Mês Atual
+                </Button>
+                <Button
+                    variant={activePreset === 'mesAnterior' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handlePresetClick('mesAnterior')}
+                    className={cn("h-7 text-xs rounded-md transition-all", activePreset === 'mesAnterior' && "shadow-sm")}
+                >
+                    Mês Anterior
                 </Button>
                 <div className="w-px h-4 bg-border/50 mx-1" />
                 <Popover open={showCustomPicker} onOpenChange={setShowCustomPicker}>

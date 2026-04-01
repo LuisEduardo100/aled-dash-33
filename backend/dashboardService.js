@@ -1,6 +1,6 @@
 const db = require('./db');
 
-const getDashboardData = async (scope = 'mes_atual') => {
+const getDashboardData = async (scope = 'trimestre_atual') => {
   try {
     const result = await db.query(
       'SELECT payload FROM dashboard_leads_lovable WHERE scope = $1 LIMIT 1',
@@ -33,7 +33,7 @@ const getDashboardData = async (scope = 'mes_atual') => {
 };
 
 // Return raw data for frontend processing
-const getRawData = async (scope = 'mes_atual') => {
+const getRawData = async (scope = 'trimestre_atual') => {
   try {
     console.log(`Querying raw data for scope: ${scope}`);
     let result = await db.query(

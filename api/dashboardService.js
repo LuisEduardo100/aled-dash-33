@@ -1,6 +1,6 @@
 import { query } from './db.js';
 
-export const getDashboardData = async (scope = 'mes_atual') => {
+export const getDashboardData = async (scope = 'trimestre_atual') => {
   try {
     const result = await query(
       'SELECT payload FROM dashboard_leads_lovable WHERE scope = $1 LIMIT 1',
@@ -33,7 +33,7 @@ export const getDashboardData = async (scope = 'mes_atual') => {
 };
 
 // Return raw data for frontend processing
-export const getRawData = async (scope = 'mes_atual') => {
+export const getRawData = async (scope = 'trimestre_atual') => {
   try {
     console.log(`Querying raw data for scope: ${scope}`);
     let result = await query(

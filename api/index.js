@@ -13,7 +13,7 @@ app.use(express.json());
 // Routes
 app.get('/api/dashboard', async (req, res) => {
   try {
-    const scope = req.query.scope || 'mes_atual';
+    const scope = req.query.scope || 'trimestre_atual';
     const data = await dashboardService.getDashboardData(scope);
     res.json(data);
   } catch (error) {
@@ -25,7 +25,7 @@ app.get('/api/dashboard', async (req, res) => {
 // Raw data endpoint for frontend processing
 app.get('/api/dashboard/raw', async (req, res) => {
   try {
-    const scope = req.query.scope || 'mes_atual';
+    const scope = req.query.scope || 'trimestre_atual';
     const data = await dashboardService.getRawData(scope);
     res.json(data);
   } catch (error) {
