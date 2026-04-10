@@ -94,8 +94,10 @@ app.post('/api/sync/deals', async (req, res) => {
 // Get cached created deals
 app.get('/api/created-deals/raw', async (req, res) => {
     try {
+        res.set('Cache-Control', 'no-store');
         const limit = req.query.limit ? parseInt(req.query.limit) : 5000;
         const deals = await createdDealService.getCachedDeals(limit);
+        console.log(`[Raw] Retornando ${deals.length} deals`);
         res.json({ success: true, count: deals.length, deals: deals });
     } catch (error) {
         console.error('API Error:', error);
