@@ -48,31 +48,44 @@ app.get('/api/dashboard/geojson', async (req, res) => {
     }
 });
 
-// Proxy for Bitrix Sync Webhook (N8N)
+// Helper to call an n8n webhook
+const callN8nWebhook = async (url, label) => {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`${label} webhook failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+  return response.json();
+};
+
+// Sync Leads (triggers n8n leads workflow)
 app.post('/api/sync', async (req, res) => {
   try {
-    req.setTimeout(300000); 
-    
-    console.log('Triggering Bitrix sync...');
-
-    const response = await fetch('https://webhookrota.aled1.com/webhook/sync-bitrix-postgres', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json' 
-      },
-      body: JSON.stringify({})
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text(); 
-      throw new Error(`Webhook failed: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('Sync completed:', data);
+    req.setTimeout(300000);
+    console.log('Triggering Leads sync...');
+    const data = await callN8nWebhook(process.env.N8N_SYNC_LEADS_URL, 'Leads');
+    console.log('Leads sync completed:', data);
     res.json(data);
   } catch (error) {
     console.error('Sync Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Sync Deals (triggers n8n deals workflow)
+app.post('/api/sync/deals', async (req, res) => {
+  try {
+    req.setTimeout(300000);
+    console.log('Triggering Deals sync...');
+    const data = await callN8nWebhook(process.env.N8N_SYNC_DEALS_URL, 'Deals');
+    console.log('Deals sync completed:', data);
+    res.json(data);
+  } catch (error) {
+    console.error('Sync Deals Error:', error);
     res.status(500).json({ error: error.message });
   }
 });

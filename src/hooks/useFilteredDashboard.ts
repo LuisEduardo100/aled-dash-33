@@ -518,41 +518,45 @@ export const useFilteredDashboard = (
         }
     }, []);
 
-    // Trigger Sync via Backend Proxy
+    const baseApiUrl = API_CONFIG.DASHBOARD_ENDPOINT.replace('/dashboard', '');
+
+    // Sync leads (triggers n8n leads workflow)
     const syncData = useCallback(async () => {
         setIsSyncing(true);
-        // Don't clear current data/error, just show syncing state
         try {
-            // Using a relative path which will be proxied or hit the same domain server
-            // Adjust base URL if API_CONFIG.BASE_URL is different from where /api/sync lives
-            // Assuming API_CONFIG.DASHBOARD_ENDPOINT is like 'http://localhost:3000/api/dashboard'
-            // We want 'http://localhost:3000/api/sync'
-            // Let's construct it safely or hardcode relative '/api/sync' if on same origin
-
-            const baseUrl = API_CONFIG.DASHBOARD_ENDPOINT.replace('/dashboard', '');
-            const url = `${baseUrl}/sync`;
-
-            const response = await fetch(url, { method: 'POST' });
-
+            const response = await fetch(`${baseApiUrl}/sync`, { method: 'POST' });
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.details || `Sync failed: ${response.status}`);
+                throw new Error(errData.error || `Sync failed: ${response.status}`);
             }
-
-            const result = await response.json();
-            console.log('Sync success:', result);
-
-            // After sync success, refetch data
+            console.log('Leads sync success');
             await fetchData();
-
         } catch (err) {
             console.error('Sync error:', err);
-            // Optionally set a toast or temporary error, but maybe not block the dashboard
-            alert('Erro ao sincronizar dados: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
+            alert('Erro ao sincronizar leads: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
         } finally {
             setIsSyncing(false);
         }
-    }, [fetchData]);
+    }, [fetchData, baseApiUrl]);
+
+    // Sync deals (triggers n8n deals workflow)
+    const syncDeals = useCallback(async () => {
+        setIsSyncing(true);
+        try {
+            const response = await fetch(`${baseApiUrl}/sync/deals`, { method: 'POST' });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `Sync deals failed: ${response.status}`);
+            }
+            console.log('Deals sync success');
+            await fetchData();
+        } catch (err) {
+            console.error('Sync deals error:', err);
+            alert('Erro ao sincronizar negócios: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
+        } finally {
+            setIsSyncing(false);
+        }
+    }, [fetchData, baseApiUrl]);
 
     useEffect(() => {
         fetchData();
@@ -912,9 +916,11 @@ export const useFilteredDashboard = (
     return {
         ...filteredData,
         isLoading,
-        isSyncing, // New
+        isSyncing,
         error,
-        refetch: syncData, // Override default refetch with sync logic
+        refetch: fetchData,
+        syncLeads: syncData,
+        syncDeals,
     };
 };
 

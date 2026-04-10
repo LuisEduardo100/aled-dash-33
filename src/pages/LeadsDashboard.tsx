@@ -61,7 +61,8 @@ export default function LeadsDashboard() {
     isLoading,
     isSyncing,
     error,
-    refetch
+    refetch,
+    syncLeads,
   } = useFilteredDashboard(
     dateFilter,
     sourceFilter === 'Todos' ? null : sourceFilter,
@@ -154,6 +155,7 @@ export default function LeadsDashboard() {
           onFunnelFilterChange={() => { }}
           availableFunnels={[]}
           onRefresh={refetch}
+          onSync={syncLeads}
           isLoading={isLoading}
           isSyncing={isSyncing}
         />

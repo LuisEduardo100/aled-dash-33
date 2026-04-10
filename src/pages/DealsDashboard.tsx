@@ -80,7 +80,8 @@ export default function DealsDashboard() {
     isLoading,
     isSyncing,
     error,
-    refetch
+    refetch,
+    syncDeals,
   } = useFilteredDashboard(
     dateFilter,
     sourceFilter === 'Todos' ? null : sourceFilter,
@@ -289,6 +290,7 @@ export default function DealsDashboard() {
           onFunnelFilterChange={setFunnelFilter}
           availableFunnels={availableFunnels}
           segmentFilter={segmentFilter}
+          onSync={syncDeals}
           onSegmentFilterChange={setSegmentFilter}
           onRefresh={refetch}
           isLoading={isLoading}
