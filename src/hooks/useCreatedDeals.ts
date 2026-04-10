@@ -92,7 +92,7 @@ export const useCreatedDeals = (
             metricsPrevious: { total: 0, varejo: 0, projeto: 0, valorTotal: 0 },
             wonLost: { won: 0, lost: 0 },
             timeline: [],
-            sources: []
+            sourcesChart: []
         };
 
         const startDate = dateFilter.startDate;
