@@ -28,6 +28,7 @@ interface FilterBarProps {
     availableFunnels?: string[];
     segmentFilter?: string;
     onSegmentFilterChange?: (segment: string) => void;
+    initialPreset?: DatePreset;
     onRefresh: () => void;
     onSync?: () => void;
     isLoading?: boolean;
@@ -44,7 +45,16 @@ const REGIONAL_DESCRIPTIONS: Record<string, string> = {
     'Regional BR': 'Todo Brasil exceto Regional CE, PI, NE e SP',
 };
 
-type DatePreset = 'hoje' | 'ultimos7' | 'mesAtual' | 'mesAnterior' | 'custom';
+type DatePreset = 'hoje' | 'ultimos7' | 'ultimos30' | 'mesAtual' | 'mesAnterior' | 'custom';
+
+const PRESET_LABELS: Record<DatePreset, string> = {
+    hoje: 'Hoje',
+    ultimos7: 'Últimos 7 dias',
+    ultimos30: 'Últimos 30 dias',
+    mesAtual: 'Este Mês',
+    mesAnterior: 'Mês Anterior',
+    custom: 'Período customizado',
+};
 
 export function FilterBar({
     dateFilter,
@@ -63,12 +73,13 @@ export function FilterBar({
     availableFunnels,
     segmentFilter,
     onSegmentFilterChange,
+    initialPreset = 'mesAtual',
     onRefresh,
     onSync,
     isLoading = false,
     isSyncing = false,
 }: FilterBarProps) {
-    const [activePreset, setActivePreset] = useState<DatePreset>('mesAtual');
+    const [activePreset, setActivePreset] = useState<DatePreset>(initialPreset);
     const [showCustomPicker, setShowCustomPicker] = useState(false);
     const [tempDate, setTempDate] = useState<DateRange | undefined>();
 
@@ -92,6 +103,12 @@ export function FilterBar({
             case 'ultimos7':
                 onDateFilterChange({
                     startDate: startOfDay(subDays(now, 6)),
+                    endDate: endOfDay(now),
+                });
+                break;
+            case 'ultimos30':
+                onDateFilterChange({
+                    startDate: startOfDay(subDays(now, 29)),
                     endDate: endOfDay(now),
                 });
                 break;
@@ -150,6 +167,14 @@ export function FilterBar({
                     className={cn("h-7 text-xs rounded-md transition-all", activePreset === 'ultimos7' && "shadow-sm")}
                 >
                     7 Dias
+                </Button>
+                <Button
+                    variant={activePreset === 'ultimos30' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handlePresetClick('ultimos30')}
+                    className={cn("h-7 text-xs rounded-md transition-all", activePreset === 'ultimos30' && "shadow-sm")}
+                >
+                    30 Dias
                 </Button>
                 <Button
                     variant={activePreset === 'mesAtual' ? 'default' : 'ghost'}
@@ -317,7 +342,7 @@ export function FilterBar({
             {/* Actions */}
             <div className="flex items-center gap-2 pl-4 border-l border-border/50">
                 <div className="bg-muted/30 px-3 py-1.5 rounded-md border border-border/30 text-xs font-medium text-muted-foreground hidden xl:block">
-                    {activePreset === 'custom' ? getDateRangeLabel() : activePreset === 'mesAtual' ? 'Este Mês' : activePreset === 'ultimos7' ? 'Últimos 7 dias' : 'Hoje'}
+                    {activePreset === 'custom' ? getDateRangeLabel() : PRESET_LABELS[activePreset]}
                 </div>
                 {/* Local Refresh - Only show if no sync or explicit request, or keep both but distinct */}
                 <Button

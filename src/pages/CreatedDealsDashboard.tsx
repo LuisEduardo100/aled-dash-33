@@ -115,6 +115,7 @@ export default function CreatedDealsDashboard() {
                 <FilterBar
                     dateFilter={dateFilter}
                     onDateFilterChange={setDateFilter}
+                    initialPreset="ultimos30"
                     sourceFilter={sourceFilter}
                     onSourceFilterChange={setSourceFilter}
                     availableSources={availableSources}
@@ -124,7 +125,6 @@ export default function CreatedDealsDashboard() {
                     regionalFilter={regionalFilter}
                     onRegionalFilterChange={setRegionalFilter}
                     availableRegionals={availableRegionals}
-                    // Funnel filter disabled for this view as it's specific
                     funnelFilter="Todos"
                     onFunnelFilterChange={() => { }}
                     availableFunnels={[]}
