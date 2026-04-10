@@ -4,7 +4,7 @@ import { FilterBar } from '@/components/dashboard/FilterBar';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { useCreatedDeals } from '@/hooks/useCreatedDeals';
 import { DateFilter } from '@/types/dashboard';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { subDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
     Users, TrendingUp, BarChart4, DollarSign, Calendar,
@@ -43,8 +43,8 @@ import {
 export default function CreatedDealsDashboard() {
     // Filters
     const [dateFilter, setDateFilter] = useState<DateFilter>({
-        startDate: startOfMonth(new Date()),
-        endDate: endOfMonth(new Date())
+        startDate: subDays(new Date(), 30),
+        endDate: new Date()
     });
     const [sourceFilter, setSourceFilter] = useState('Todos');
     const [ufFilter, setUfFilter] = useState('Todos');
