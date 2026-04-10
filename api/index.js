@@ -8,7 +8,7 @@ const app = express();
 
 // Middleware
 app.use(cors()); // Allow all origins for simplicity
-app.use(express.json());
+app.use(express.json({ limit: '20mb' })); // bulk payload from n8n
 
 // Routes
 app.get('/api/dashboard', async (req, res) => {
@@ -148,6 +148,24 @@ app.get('/api/cron/sync', async (req, res) => {
         });
     } catch (error) {
         console.error('[Cron] Sync Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Bulk upsert — recebe deals pré-processados do n8n e salva no DB
+// Separa o fetch lento do Bitrix (feito pelo n8n, sem timeout) do save rápido no DB (Vercel)
+app.post('/api/created-deals/bulk', async (req, res) => {
+    try {
+        const { deals } = req.body;
+        if (!Array.isArray(deals) || deals.length === 0) {
+            return res.json({ success: true, inserted: 0 });
+        }
+        console.log(`[Bulk] Recebendo ${deals.length} deals do n8n...`);
+        const result = await createdDealService.bulkUpsertDeals(deals);
+        console.log(`[Bulk] Concluído: ${result.count} deals upsertados.`);
+        res.json({ success: true, inserted: result.count });
+    } catch (error) {
+        console.error('[Bulk] Erro:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

@@ -1,0 +1,82 @@
+{
+  "name": "Sync Negócios Bitrix → Vercel DB",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 2 }] }
+      },
+      "id": "n8n-trigger-schedule",
+      "name": "Trigger: A cada 2h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// =========================================================\n// CONFIGURAÇÃO\n// =========================================================\nconst BITRIX_WEBHOOK_URL = 'https://atacadaoled.bitrix24.com.br/rest/2647/vaoafc68g9602xzh/';\nconst DIAS_RETROATIVOS = 30;\nconst TARGET_FUNNELS = ['304', '8', '306'];\nconst SELECT_FIELDS = [\n  'ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID', 'CATEGORY_ID',\n  'DATE_CREATE', 'DATE_MODIFY', 'CLOSEDATE', 'CLOSED', 'BEGINDATE',\n  'ASSIGNED_BY_ID', 'CREATED_BY_ID', 'SOURCE_ID', 'IS_NEW',\n  'UF_CRM_1708526262705',\n  'UF_CRM_1709557737403',\n  'UF_CRM_1709557885970',\n  'UF_CRM_690B56170F2F9',\n  'UF_CRM_1731350457664',\n  'UF_CRM_1763990651471',\n  'UF_CRM_1709985139188'\n];\n\n// =========================================================\n// FETCH PAGINADO\n// this.helpers.httpRequest é o método oficial do n8n para\n// requisições HTTP dentro do Code node.\n// =========================================================\nconst sinceDate = new Date();\nsinceDate.setDate(sinceDate.getDate() - DIAS_RETROATIVOS);\nconst sinceDateISO = sinceDate.toISOString();\n\nlet allDeals = [];\n\nfor (const funnelId of TARGET_FUNNELS) {\n  let start = 0;\n  let hasMore = true;\n  let totalFunnel = 0;\n\n  while (hasMore) {\n    const requestBody = {\n      start: start,\n      filter: {\n        CATEGORY_ID: funnelId,\n        '>=DATE_MODIFY': sinceDateISO\n      },\n      select: SELECT_FIELDS\n    };\n\n    const resp = await this.helpers.httpRequest({\n      method: 'POST',\n      url: BITRIX_WEBHOOK_URL + 'crm.deal.list',\n      headers: { 'Content-Type': 'application/json' },\n      body: requestBody,\n      json: true\n    });\n\n    const deals = resp.result || [];\n    allDeals = allDeals.concat(deals);\n    totalFunnel += deals.length;\n\n    if (resp.next) {\n      start = resp.next;\n      await new Promise(function(resolve) { setTimeout(resolve, 200); });\n    } else {\n      hasMore = false;\n    }\n  }\n\n  console.log('Funil ' + funnelId + ': ' + totalFunnel + ' deals buscados');\n}\n\nconsole.log('Total raw deals: ' + allDeals.length);\nreturn allDeals.map(function(d) { return { json: d }; });"
+      },
+      "id": "n8n-fetch-bitrix",
+      "name": "1. Fetch Bitrix (paginado)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// =========================================================\n// MAPEAMENTOS\n// =========================================================\nconst MAPA_FONTES = {\n  'UC_JKGTUC': 'Prospecção', 'WEBFORM': 'Google', 'CALLBACK': 'Instagram',\n  'STORE': 'Indicação Amigo', 'RC_GENERATOR': 'Indicação Profissional',\n  'CALL': 'CFA', 'UC_H0VN85': 'Youtube', 'UC_F445HA': 'Vitrine/Carro',\n  'UC_8OOM1P': 'Encarte/Outdoor', 'UC_GG87LP': 'Eventos', 'UC_HCJB1D': 'Facebook',\n  'UC_N35K7E': 'Ativação Relac.', 'REPEAT_SALE': 'Corporativo', 'UC_Y1DNMP': 'Site',\n  'Google': 'Google', 'Facebook': 'Facebook', 'Instagram': 'Instagram',\n  'Indicação': 'Indicação Amigo', 'WEB': 'Site',\n  'UC_JNSE1L': 'LTV', 'UC_6F33AS': 'Busca orgânica'\n};\n\nconst MAPA_ESTADOS = {\n  '18493':'AC','18441':'AL','18443':'AP','18445':'AM','18447':'BA',\n  '18449':'CE','18451':'DF','18453':'ES','18455':'GO','18457':'MA',\n  '18459':'MT','18461':'MS','18463':'MG','18465':'PA','18467':'PB',\n  '18469':'PR','18471':'PE','18473':'PI','18475':'RJ','18477':'RN',\n  '18479':'RS','18481':'RO','18483':'RR','18485':'SC','18487':'SP',\n  '18489':'SE','18491':'TO'\n};\n\nconst MAPA_VENDEDORES = {\n  '2870':'Atlas Ataike','286':'Victor Jorge','70':'Raquel Freitas',\n  '364':'Paulo César','254':'Samuel Souza','190':'Mateus Martins',\n  '2603':'Jucelino Júnior','2647':'Nethison Rocha','52':'Yuri Queiroz',\n  '166':'Matheus Freitas','100':'Renato Campos','2258':'Aderúcia Pereira',\n  '2884':'Jean Souza','2860':'Janderson Guerra','2872':'Clara Iven',\n  '2767':'Isabela Silva','2593':'Gabriela Lima','2581':'Amanda Gomes',\n  '2415':'Ana Flavia','2888':'Vanessa Nascimento','2876':'Juan Yuri'\n};\n\nconst MAPA_MOTIVO_PERDA = {\n  '49438':'Preço ou Condição de Pagamento',\n  '49440':'Fechou com Concorrente',\n  '49442':'Mix de Produtos (Não Trabalhamos)',\n  '49444':'Estoque ou Prazo de Entrega',\n  '49446':'Sem Contato com Decisor',\n  '49448':'Cliente Sumiu (Sem Retorno)',\n  '49450':'Projeto Adiado / Desistência',\n  '49452':'Demora no Nosso Atendimento'\n};\n\nconst MAPA_CATEGORY_ID = {\n  '8':'[Inside] Negociações SMB','126':'Sala Técnica',\n  '134':'[Orçamentos] Varejo','221':'[Lojas] Lumentech',\n  '304':'[Corporativo] Negociações','306':'[Lojas] Barão'\n};\n\nconst IDS_VAREJO  = ['18175','44163'];\nconst IDS_PROJETO = ['18177','18561','18935'];\nconst ESTADOS_NE  = ['AL','BA','CE','MA','PB','PE','PI','RN','SE'];\n\n// =========================================================\n// HELPERS\n// =========================================================\nfunction tratarFonte(src) { return MAPA_FONTES[src] || src || 'Direto'; }\nfunction tratarVendedor(id) { return MAPA_VENDEDORES[String(id)] || ('ID ' + id); }\nfunction normalizarId(v) { return Array.isArray(v) ? String(v[0] || '') : String(v || ''); }\nfunction normalizarData(iso) { return iso ? new Date(iso).toISOString() : null; }\n\nfunction definingRegional(uf) {\n  if (!uf || uf === 'N/I') return 'N/I';\n  if (uf === 'CE') return 'Regional CE';\n  if (uf === 'PI') return 'Regional PI';\n  if (uf === 'SP') return 'Regional SP';\n  if (ESTADOS_NE.includes(uf)) return 'Regional NE';\n  return 'Regional BR';\n}\n\nfunction tratarStatus(deal) {\n  const s = String(deal.STAGE_ID || '').toUpperCase();\n  if (s.includes('WON')) return 'Ganho';\n  if (s.includes('LOSE') || s.includes('LOST')) return 'Perdido';\n  if (deal.CLOSED === 'Y') return 'Perdido';\n  return 'Em Andamento';\n}\n\n// =========================================================\n// PROCESSAR DEAL\n// =========================================================\nconst deal = $input.item.json;\n\nconst tipoId = normalizarId(deal['UF_CRM_1708526262705']);\nlet segmento = 'Outros';\nif (IDS_PROJETO.includes(tipoId)) segmento = 'Projeto';\nelse if (IDS_VAREJO.includes(tipoId)) segmento = 'Varejo';\n\nconst statusNome = tratarStatus(deal);\nconst uf = MAPA_ESTADOS[deal['UF_CRM_1709557737403']] || 'N/I';\nconst catId = String(deal.CATEGORY_ID || '');\nconst dataRef = deal.CLOSED === 'Y' ? (deal.CLOSEDATE || deal.DATE_CREATE) : deal.DATE_CREATE;\n\nreturn {\n  json: {\n    id:               String(deal.ID),\n    titulo:           deal.TITLE || '',\n    valor:            parseFloat(deal.OPPORTUNITY) || 0,\n    segmento:         segmento,\n    fonte:            tratarFonte(deal.SOURCE_ID),\n    uf:               uf,\n    regional:         definingRegional(uf),\n    motivo_perda:     MAPA_MOTIVO_PERDA[normalizarId(deal['UF_CRM_1709985139188'])] || 'N/I',\n    cidade:           deal['UF_CRM_1709557885970'] || 'N/I',\n    telefone:         deal['UF_CRM_1731350457664'] || 'N/I',\n    status_codigo:    deal.STAGE_ID || '',\n    status_nome:      statusNome,\n    responsavel_nome: tratarVendedor(deal.ASSIGNED_BY_ID),\n    criador_nome:     tratarVendedor(deal.CREATED_BY_ID),\n    funil:            MAPA_CATEGORY_ID[catId] || catId,\n    funil_id:         catId,\n    is_novo:          deal.IS_NEW === 'Y',\n    is_fechado:       deal.CLOSED === 'Y',\n    is_ganho:         statusNome === 'Ganho',\n    link_bitrix:      'https://atacadaoled.bitrix24.com.br/crm/deal/details/' + deal.ID + '/',\n    link_kinbox:      deal['UF_CRM_690B56170F2F9'] || '#',\n    data_criacao:     normalizarData(deal.DATE_CREATE),\n    data_fechamento:  normalizarData(dataRef),\n    id_lead:          deal['UF_CRM_1763990651471'] || null\n  }\n};"
+      },
+      "id": "n8n-process-deals",
+      "name": "2. Processar Deals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const deals = $input.all().map(function(i) { return i.json; });\nconsole.log('Enviando ' + deals.length + ' deals para o Vercel...');\nreturn [{ json: { deals: deals } }];"
+      },
+      "id": "n8n-aggregate",
+      "name": "3. Agregar em Array",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1020, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://aled-dash-33.vercel.app/api/created-deals/bulk",
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{ $json }}",
+        "options": { "timeout": 55000 }
+      },
+      "id": "n8n-post-vercel",
+      "name": "4. POST → Vercel /bulk",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1280, 300]
+    }
+  ],
+  "connections": {
+    "Trigger: A cada 2h": {
+      "main": [[{ "node": "1. Fetch Bitrix (paginado)", "type": "main", "index": 0 }]]
+    },
+    "1. Fetch Bitrix (paginado)": {
+      "main": [[{ "node": "2. Processar Deals", "type": "main", "index": 0 }]]
+    },
+    "2. Processar Deals": {
+      "main": [[{ "node": "3. Agregar em Array", "type": "main", "index": 0 }]]
+    },
+    "3. Agregar em Array": {
+      "main": [[{ "node": "4. POST → Vercel /bulk", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "meta": { "templateCredsSetupCompleted": true },
+  "pinData": {}
+}

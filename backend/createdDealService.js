@@ -121,7 +121,49 @@ const getCachedDeals = async (limit = 5000) => {
     }
 };
 
+const bulkUpsertDeals = async (deals) => {
+    if (!deals || deals.length === 0) return { count: 0 };
+    const client = await db.pool.connect();
+    try {
+        await client.query('BEGIN');
+        const q = `
+            INSERT INTO cached_created_deals (
+                id, titulo, valor, segmento, fonte, uf, regional, motivo_perda,
+                cidade, telefone, status_codigo, status_nome, responsavel_nome,
+                criador_nome, funil, funil_id, is_novo, is_fechado, is_ganho,
+                link_bitrix, link_kinbox, data_criacao, data_fechamento, id_lead, updated_at
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,NOW())
+            ON CONFLICT (id) DO UPDATE SET
+                titulo=EXCLUDED.titulo, valor=EXCLUDED.valor, segmento=EXCLUDED.segmento,
+                fonte=EXCLUDED.fonte, uf=EXCLUDED.uf, regional=EXCLUDED.regional,
+                motivo_perda=EXCLUDED.motivo_perda, cidade=EXCLUDED.cidade, telefone=EXCLUDED.telefone,
+                status_codigo=EXCLUDED.status_codigo, status_nome=EXCLUDED.status_nome,
+                responsavel_nome=EXCLUDED.responsavel_nome, criador_nome=EXCLUDED.criador_nome,
+                funil=EXCLUDED.funil, funil_id=EXCLUDED.funil_id, is_novo=EXCLUDED.is_novo,
+                is_fechado=EXCLUDED.is_fechado, is_ganho=EXCLUDED.is_ganho,
+                link_bitrix=EXCLUDED.link_bitrix, link_kinbox=EXCLUDED.link_kinbox,
+                data_criacao=EXCLUDED.data_criacao, data_fechamento=EXCLUDED.data_fechamento,
+                id_lead=EXCLUDED.id_lead, updated_at=NOW()`;
+        for (const d of deals) {
+            await client.query(q, [
+                d.id, d.titulo, d.valor, d.segmento, d.fonte, d.uf, d.regional, d.motivo_perda,
+                d.cidade, d.telefone, d.status_codigo, d.status_nome, d.responsavel_nome,
+                d.criador_nome, d.funil, d.funil_id, d.is_novo, d.is_fechado, d.is_ganho,
+                d.link_bitrix, d.link_kinbox, d.data_criacao, d.data_fechamento, d.id_lead
+            ]);
+        }
+        await client.query('COMMIT');
+        return { count: deals.length };
+    } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     syncDealsFromBitrix,
-    getCachedDeals
+    getCachedDeals,
+    bulkUpsertDeals
 };
