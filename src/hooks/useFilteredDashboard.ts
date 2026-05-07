@@ -441,6 +441,56 @@ export const useFilteredDashboard = (
             // Safely merge incoming data
             const incomingPayload = data.payload || data;
 
+            // ============================================================
+            // WORKAROUND: compensa o desalinhamento de +4h na sync do n8n.
+            // Verificado via comparação direta com a API do Bitrix: leads
+            // gravados no cache estão 4h "à frente" do UTC verdadeiro
+            // (ex.: lead 57550 raw "T14:10:39+03:00" virou "T15:10:39Z").
+            // Remover esta função quando o workflow n8n_sync_leads_FIX.json
+            // for importado e o cache for re-sincronizado.
+            // ============================================================
+            const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+            const shiftIso = (iso: string | undefined | null): string | undefined | null => {
+                if (!iso) return iso;
+                const t = new Date(iso).getTime();
+                if (Number.isNaN(t)) return iso;
+                return new Date(t - FOUR_HOURS_MS).toISOString();
+            };
+            const fixLeadDates = (lead: SegmentedLead): SegmentedLead => ({
+                ...lead,
+                data_criacao: shiftIso(lead.data_criacao) || lead.data_criacao,
+                data_referencia: shiftIso(lead.data_referencia) || lead.data_referencia,
+            });
+            const fixDealDates = (deal: SegmentedDeal): SegmentedDeal => ({
+                ...deal,
+                data_criacao: shiftIso(deal.data_criacao) || deal.data_criacao,
+                data_referencia: shiftIso(deal.data_referencia) || deal.data_referencia,
+            });
+            if (!API_CONFIG.USE_MOCK_DATA) {
+                if (incomingPayload.leads) {
+                    if (Array.isArray(incomingPayload.leads)) {
+                        incomingPayload.leads = incomingPayload.leads.map(fixLeadDates);
+                    } else {
+                        ['em_atendimento', 'descartados', 'convertidos'].forEach((bucket) => {
+                            const arr = incomingPayload.leads[bucket];
+                            if (Array.isArray(arr)) incomingPayload.leads[bucket] = arr.map(fixLeadDates);
+                        });
+                    }
+                }
+                if (incomingPayload.deals) {
+                    if (Array.isArray(incomingPayload.deals)) {
+                        incomingPayload.deals = incomingPayload.deals.map(fixDealDates);
+                    } else if (incomingPayload.deals.por_status) {
+                        ['ganhos', 'perdidos', 'andamento'].forEach((bucket) => {
+                            const arr = incomingPayload.deals.por_status[bucket];
+                            if (Array.isArray(arr)) {
+                                incomingPayload.deals.por_status[bucket] = arr.map(fixDealDates);
+                            }
+                        });
+                    }
+                }
+            }
+
             // ... (keeping existing logic for leads/deals extraction same as viewed) ...
             // Re-pasting the extraction logic to ensure continuity
 

@@ -76,7 +76,6 @@ export default function Dashboard() {
     availableFunnels, // NEW
     geoData,
     marketingData,
-    leadsTimeline,
     convertedBreakdown,
     discardReasons,
     dealLossReasons, // NEW
@@ -392,7 +391,7 @@ export default function Dashboard() {
           ) : (
             <>
               <div className="md:col-span-2">
-                <LeadTimelineChart data={leadsTimeline} />
+                <LeadTimelineChart leads={leads} dateFilter={dateFilter} />
               </div>
               <SourceChart leads={allLeads} onBarClick={handleSourceChartClick} />
               <ConversionChart deals={allDeals} onSegmentClick={handleConversionChartClick} />

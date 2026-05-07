@@ -56,7 +56,6 @@ export default function LeadsDashboard() {
     availableRegionals,
     geoData,
     marketingData,
-    leadsTimeline,
     discardReasons,
     isLoading,
     isSyncing,
@@ -209,7 +208,7 @@ export default function LeadsDashboard() {
           {isLoading ? (
             <Skeleton className="h-[350px] rounded-lg" />
           ) : (
-            <LeadTimelineChart data={leadsTimeline} />
+            <LeadTimelineChart leads={leads} dateFilter={dateFilter} />
           )}
         </div>
 
