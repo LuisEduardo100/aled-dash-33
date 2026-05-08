@@ -167,15 +167,15 @@ export const DataListModal: React.FC<DataListModalProps> = ({
                                         <TableCell className="text-gray-300">{formatDate(lead.data_criacao)}</TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
-                                                {lead.link_kinbox && (
+                                                {(lead.link_conversa || lead.link_kinbox) && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-cyan-400 hover:text-cyan-300"
-                                                        onClick={() => window.open(lead.link_kinbox, '_blank')}
+                                                        onClick={() => window.open(lead.link_conversa || lead.link_kinbox, '_blank')}
                                                     >
                                                         <ExternalLink className="h-4 w-4 mr-1" />
-                                                        Kinbox
+                                                        Conversa
                                                     </Button>
                                                 )}
                                                 {lead.link_bitrix && (

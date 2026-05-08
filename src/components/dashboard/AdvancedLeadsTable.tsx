@@ -41,6 +41,8 @@ type UnifiedRow = {
     funil: string;
     data: string; // Created or Closed date
     link_bitrix: string;
+    link_conversa?: string;
+    /** @deprecated use link_conversa */
     link_kinbox?: string;
     raw: SegmentedLead | SegmentedDeal;
 };
@@ -93,7 +95,7 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                     funil: '-',
                     data: l.data_criacao,
                     link_bitrix: l.link_bitrix,
-                    link_kinbox: l.link_kinbox,
+                    link_conversa: l.link_conversa || l.link_kinbox,
                     raw: l,
                 });
             });
@@ -117,7 +119,7 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                     funil: d.funil || '-',
                     data: d.data_criacao, // Or data_fechamento for closed deals? Keeping creation for consistency unless requested
                     link_bitrix: d.link_bitrix,
-                    link_kinbox: d.link_kinbox,
+                    link_conversa: d.link_conversa || d.link_kinbox,
                     raw: d,
                 });
             });
@@ -348,13 +350,13 @@ export function AdvancedLeadsTable({ leads, deals }: AdvancedLeadsTableProps) {
                                         <TableCell className="text-muted-foreground text-sm">{formatDate(row.data)}</TableCell>
                                         <TableCell>
                                             <div className="flex justify-end gap-2">
-                                                {row.link_kinbox && (
+                                                {row.link_conversa && (
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-8 w-8 text-cyan-500 hover:text-cyan-600 hover:bg-cyan-500/10"
-                                                        onClick={() => window.open(row.link_kinbox, '_blank')}
-                                                        title="Abrir no Kinbox"
+                                                        onClick={() => window.open(row.link_conversa, '_blank')}
+                                                        title="Abrir conversa"
                                                     >
                                                         <MessageSquare className="h-4 w-4" />
                                                     </Button>

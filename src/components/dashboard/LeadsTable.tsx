@@ -218,7 +218,7 @@ export function LeadsTable({ leads, title = 'Lista de Leads' }: LeadsTableProps)
                         className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
                       >
                         <MessageSquare className="h-4 w-4 mr-1" />
-                        Kinbox
+                        Conversa
                       </Button>
                       <Button
                         variant="ghost"

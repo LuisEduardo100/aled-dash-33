@@ -23,6 +23,8 @@ export interface SegmentedLead {
     responsavel_nome: string; // Pre-treated, display directly
     criador_nome: string;
     link_bitrix: string;
+    link_conversa?: string;
+    /** @deprecated use link_conversa */
     link_kinbox?: string;
     uf?: string;
     data_criacao: string; // For Em Atendimento filter
@@ -50,6 +52,8 @@ export interface SegmentedDeal {
     is_ganho: boolean;
     is_fechado: boolean;
     link_bitrix: string;
+    link_conversa?: string;
+    /** @deprecated use link_conversa */
     link_kinbox?: string;
     id_lead?: string; // New: Lead ID for conversion analysis
     data_criacao: string; // For Pipeline/Andamento filter
@@ -203,7 +207,9 @@ export interface RawLead {
     responsavel_id: string;
     criador_id: string;
     link_bitrix: string;
-    link_kinbox: string;
+    link_conversa?: string;
+    /** @deprecated use link_conversa */
+    link_kinbox?: string;
     uf?: string;
     data_criacao: string;
     data_modificacao?: string;
@@ -225,6 +231,8 @@ export interface RawDeal {
     is_fechado: boolean;
     is_ganho: boolean;
     link_bitrix: string;
+    link_conversa?: string;
+    /** @deprecated use link_conversa */
     link_kinbox?: string;
     id_lead?: string;
     data_criacao: string;

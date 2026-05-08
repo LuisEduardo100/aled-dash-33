@@ -190,8 +190,8 @@ export function SalesPerformanceTable({ deals }: SalesPerformanceTableProps) {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex justify-end gap-2">
-                                                {deal.link_kinbox && (
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-cyan-500 hover:text-cyan-600 hover:bg-cyan-500/10" onClick={() => window.open(deal.link_kinbox, '_blank')} title="Abrir no Kinbox">
+                                                {(deal.link_conversa || deal.link_kinbox) && (
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-cyan-500 hover:text-cyan-600 hover:bg-cyan-500/10" onClick={() => window.open(deal.link_conversa || deal.link_kinbox, '_blank')} title="Abrir conversa">
                                                         <MessageSquare className="h-4 w-4" />
                                                     </Button>
                                                 )}

@@ -73,15 +73,15 @@ const LeadRow = React.memo(({
     </TableCell>
     <TableCell>
       <div className="flex justify-end gap-2">
-        {lead.link_kinbox && (
+        {(lead.link_conversa || lead.link_kinbox) && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => window.open(lead.link_kinbox, '_blank')}
+            onClick={() => window.open(lead.link_conversa || lead.link_kinbox, '_blank')}
             className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
           >
             <MessageSquare className="h-4 w-4 mr-1" />
-            Kinbox
+            Conversa
           </Button>
         )}
         <Button
@@ -140,15 +140,15 @@ const DealRow = React.memo(({
     </TableCell>
     <TableCell>
       <div className="flex justify-end gap-2">
-        {deal.link_kinbox && (
+        {(deal.link_conversa || deal.link_kinbox) && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => window.open(deal.link_kinbox, '_blank')}
+            onClick={() => window.open(deal.link_conversa || deal.link_kinbox, '_blank')}
             className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
           >
             <MessageSquare className="h-4 w-4 mr-1" />
-            Kinbox
+            Conversa
           </Button>
         )}
         <Button
